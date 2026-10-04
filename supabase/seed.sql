@@ -1,0 +1,2 @@
+-- Sem dados de exemplo no banco.
+-- O primeiro usuário criado (Studio > Authentication > Add user) vira admin.

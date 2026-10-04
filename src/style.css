@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+/*
+  Design system "Contas do Mês"
+  Produto premium, escuro e neutro: grafite como base, branco no texto e o azul
+  só onde a pessoa age ou onde algo está selecionado. Os nomes seguem o shadcn
+  (background, card, primary...) para os componentes poderem ser trocados ou
+  atualizados sem retrabalho.
+
+  Camadas de superfície (da mais funda para a mais alta):
+    background #232222  →  card #2b2a2a  →  popover #313030  →  secondary #3B3A3A
+*/
+:root {
+  --background: #232222;
+  --foreground: #ffffff;
+  --card: #2b2a2a;
+  --card-foreground: #ffffff;
+  --popover: #313030;
+  --popover-foreground: #ffffff;
+  --muted: #333232;
+  --muted-foreground: #a9a7a7;
+  --secondary: #3b3a3a;
+  --secondary-foreground: #ffffff;
+
+  /* azul: primary para botões; accent é o azul translúcido de seleção */
+  --primary: #2f6df6;
+  --primary-foreground: #ffffff;
+  --primary-text: #8db4ff;
+  --accent: rgba(47, 109, 246, 0.18);
+  --accent-foreground: #9dbfff;
+  --ring: #5c93ff;
+
+  --destructive: #f08080;
+  --destructive-foreground: #2a0a0a;
+  --border: rgba(255, 255, 255, 0.09);
+  --input: rgba(255, 255, 255, 0.17);
+  --axis: #4a4949;
+
+  /* estados (sempre com ícone + texto) */
+  --good: #0ca30c;
+  --warn: #fab219;
+  --serious: #ec835a;
+  --crit: #d03b3b;
+
+  /* categorias dos gráficos (ordem fixa, validada para fundo escuro) */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #008300;
+  --chart-7: #9085e9;
+  --chart-8: #e66767;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "Geist", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Geist", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-text: var(--primary-text);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-axis: var(--axis);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-serious: var(--serious);
+  --color-crit: var(--crit);
+
+  /* escala do azul da marca (use bg-brand-500, text-brand-300...) */
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #dbe8ff;
+  --color-brand-200: #bcd4ff;
+  --color-brand-300: #8db4ff;
+  --color-brand-400: #5c93ff;
+  --color-brand-500: #2f6df6;
+  --color-brand-600: #2456d6;
+  --color-brand-700: #1e44ad;
+  --color-brand-800: #1c3a8a;
+  --color-brand-900: #1b2f66;
+  --color-brand-950: #121d3f;
+
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    background: var(--background);
+  }
+  body {
+    @apply bg-background font-sans text-sm text-foreground antialiased;
+    margin: 0;
+    letter-spacing: -0.005em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  button {
+    cursor: pointer;
+  }
+  ::placeholder {
+    color: var(--muted-foreground);
+    opacity: 0.75;
+  }
+  ::selection {
+    background: rgba(47, 109, 246, 0.45);
+  }
+  /* barras de rolagem discretas */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--secondary) transparent;
+  }
+}
+
+/* SVG dos gráficos */
+.chart-text {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  fill: var(--muted-foreground);
+}
+.chart-text-strong {
+  fill: var(--foreground);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

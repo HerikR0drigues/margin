@@ -1,0 +1,13 @@
+# Configuração mínima do Supabase local (o CLI preenche o resto com padrões).
+# Se preferir o arquivo completo, rode `npx supabase init` em outra pasta e
+# copie para cá, mantendo estas três configurações.
+project_id = "contas-do-mes"
+
+[auth]
+# Acesso só por convite: ninguém consegue se cadastrar sozinho.
+# A conta é criada pela Edge Function accept-invite.
+enable_signup = false
+
+[functions.accept-invite]
+# A função é chamada por quem ainda não tem conta.
+verify_jwt = false
