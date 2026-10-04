@@ -1,4 +1,4 @@
--- Contas do Mês: schema inicial
+-- Margin: schema inicial
 -- Acesso só por convite. Cada usuário enxerga apenas os próprios dados (RLS).
 -- O primeiro usuário criado vira admin automaticamente.
 

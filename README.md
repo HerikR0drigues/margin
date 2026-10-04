@@ -1,4 +1,4 @@
-# Contas do Mês
+# Margin
 
 Controle de gastos mensais com recorrentes, gastos pontuais, cartão variável, planejamento de objetivos (viagem, carro, reserva) e acesso **só por convite**.
 

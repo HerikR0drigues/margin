@@ -1,7 +1,7 @@
 # Configuração mínima do Supabase local (o CLI preenche o resto com padrões).
 # Se preferir o arquivo completo, rode `npx supabase init` em outra pasta e
 # copie para cá, mantendo estas três configurações.
-project_id = "contas-do-mes"
+project_id = "margin"
 
 [auth]
 # Acesso só por convite: ninguém consegue se cadastrar sozinho.

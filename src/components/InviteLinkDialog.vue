@@ -22,7 +22,7 @@ async function copy() {
   }
 }
 const whatsapp = () =>
-  `https://wa.me/?text=${encodeURIComponent(`Você foi convidado para o Contas do Mês. Crie sua conta aqui: ${props.link}`)}`
+  `https://wa.me/?text=${encodeURIComponent(`Você foi convidado para o Margin. Crie sua conta aqui: ${props.link}`)}`
 </script>
 
 <template>

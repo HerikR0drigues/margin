@@ -105,7 +105,7 @@ async function submit() {
     <div class="w-full max-w-sm">
       <div class="mb-8 flex items-center gap-2.5">
         <span class="grid size-9 place-items-center rounded-xl bg-primary text-base font-bold text-primary-foreground">C</span>
-        <span class="text-lg font-semibold tracking-tight">Contas do Mês</span>
+        <span class="text-lg font-semibold tracking-tight">Margin</span>
       </div>
 
       <p v-if="state === 'loading'" class="text-sm text-muted-foreground">Verificando o convite…</p>

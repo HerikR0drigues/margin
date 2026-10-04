@@ -1,4 +1,4 @@
-# Contas do Mês — contexto para continuar o projeto
+# Margin — contexto para continuar o projeto
 
 App de gastos mensais, micro SaaS **só por convite**. Dono/admin: o próprio usuário. Idioma da interface: **PT-BR**.
 
