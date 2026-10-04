@@ -2,12 +2,17 @@
 // schema auth, auth.uid() e os papéis anon/authenticated.
 // Uso: npm run test:sql
 import { PGlite } from '@electric-sql/pglite'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const migration = readFileSync(join(here, '../migrations/20261004000000_init.sql'), 'utf8')
+const migrationsDir = join(here, '../migrations')
+const migration = readdirSync(migrationsDir)
+  .filter((f) => f.endsWith('.sql'))
+  .sort()
+  .map((f) => readFileSync(join(migrationsDir, f), 'utf8'))
+  .join(';\n')
 
 const db = new PGlite()
 let failures = 0
@@ -110,8 +115,29 @@ await db.query("insert into goals (name, kind, target_amount, target_date) value
 const goals = await q('select count(*)::int as n from goals')
 ok(goals[0].n === 1, 'meta criada')
 
+// --- itens do objetivo e rendas extras
+const [{ id: goalA }] = await q("select id from goals limit 1")
+await db.query("insert into goal_items (goal_id, name, payment, amount) values ($1, 'Passagens', 'cash', 4000)", [goalA])
+await db.query(
+  "insert into goal_items (goal_id, name, payment, amount, down_payment, installments, installment_amount, first_month, paid_amount, paid_installments) values ($1, 'Hotel', 'installments', 3000, 500, 5, 540, '2026-11-01', 500, 1)",
+  [goalA],
+)
+ok((await q('select 1 from goal_items')).length === 2, 'itens do objetivo criados (à vista e parcelado)')
+await throws(() => db.query("insert into goal_items (goal_id, name, payment, amount) values ($1, 'Sem parcelas', 'installments', 100)", [goalA]), 'parcelado exige parcelas, valor e mês')
+await throws(() => db.query("insert into goal_items (goal_id, name, payment, amount, paid_amount) values ($1, 'Pago demais', 'cash', 100, 150)", [goalA]), 'pago à vista não passa do valor')
+await throws(() => db.query("insert into goal_items (goal_id, name, payment, amount, installments, installment_amount, first_month, paid_installments) values ($1, 'Parcelas demais', 'installments', 100, 3, 40, '2026-11-01', 4)", [goalA]), 'parcelas pagas não passam do total')
+await throws(() => db.query("update goals set my_share = 1.5"), 'minha parte vai de 0 a 100%')
+await db.query("update goals set my_share = 0.5")
+await db.query("insert into month_incomes (month, description, amount) values ('2026-05-01', 'Pix da Niva', 300)")
+await throws(() => db.query("insert into month_incomes (month, description, amount) values ('2026-05-15', 'Dia 15', 10)"), 'renda extra exige mês no dia 1')
+await throws(() => db.query("insert into month_incomes (month, description, amount) values ('2026-05-01', 'Zero', 0)"), 'renda extra precisa ser positiva')
+
 // --- isolamento entre usuários
 await as('authenticated', B)
+ok((await q('select 1 from goal_items')).length === 0, 'outro usuário não vê itens de objetivo')
+ok((await q('select 1 from month_incomes')).length === 0, 'outro usuário não vê rendas extras')
+await throws(() => db.query("insert into goal_items (goal_id, name, payment, amount) values ($1, 'Intruso', 'cash', 10)", [goalA]), 'não dá para pendurar item em objetivo alheio')
+
 ok((await q('select 1 from month_entries')).length === 0, 'outro usuário não vê lançamentos')
 ok((await q('select 1 from goals')).length === 0, 'outro usuário não vê metas')
 ok((await q('select 1 from profiles')).length === 1, 'member vê só o próprio perfil')
@@ -135,6 +161,8 @@ await throws(() => db.query("select request_access('', 'x@y.com')"), 'nome vazio
 await throws(() => db.query("select request_access('Zé', 'sem-arroba')"), 'e-mail inválido é recusado')
 await throws(() => db.query('select * from access_requests'), 'anon não lê pedidos')
 await throws(() => db.query('select * from month_entries'), 'anon não lê dados')
+await throws(() => db.query('select * from goal_items'), 'anon não lê itens de objetivo')
+await throws(() => db.query('select * from month_incomes'), 'anon não lê rendas extras')
 await throws(() => db.query("select ensure_month('2026-05-01')"), 'anon não chama ensure_month')
 const nf = await q("select check_invite('nao-existe') as r")
 ok(nf[0].r.valid === false && nf[0].r.reason === 'not_found', 'convite inexistente é inválido')

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { addMonths, currentMonthKey } from '@/lib/format'
-import { toNum, type ExpenseKind, type MonthEntry } from '@/lib/types'
+import { toNum, type ExpenseKind, type Income, type MonthEntry } from '@/lib/types'
 import { useToast } from './toast'
 
 export interface TrendMonth {
@@ -13,6 +13,9 @@ export interface TrendMonth {
   hasData: boolean
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mapIncome = (r: any): Income => ({ ...r, amount: toNum(r.amount) })
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapEntry = (r: any): MonthEntry => ({ ...r, amount: toNum(r.amount), due_day: Number(r.due_day) })
 
@@ -28,6 +31,7 @@ export const useMonth = defineStore('month', () => {
   const key = ref(currentMonthKey())
   const salary = ref(0)
   const entries = ref<MonthEntry[]>([])
+  const incomes = ref<Income[]>([])
   const trend = ref<TrendMonth[]>([])
   const loading = ref(false)
   let requestId = 0
@@ -43,7 +47,10 @@ export const useMonth = defineStore('month', () => {
     for (const e of visible.value) out[e.category] = (out[e.category] ?? 0) + e.amount
     return out
   })
-  const free = computed(() => salary.value - total.value)
+  const extraIncome = computed(() => incomes.value.reduce((s, i) => s + i.amount, 0))
+  /** salário + rendas extras do mês */
+  const income = computed(() => salary.value + extraIncome.value)
+  const free = computed(() => income.value - total.value)
   const previousTotal = computed(() => {
     const prev = trend.value.find((m) => m.key === addMonths(key.value, -1))
     return prev && prev.hasData ? prev.total : null
@@ -87,16 +94,19 @@ export const useMonth = defineStore('month', () => {
     try {
       const ensured = await supabase.rpc('ensure_month', { p_month: k })
       if (ensured.error) throw ensured.error
-      const [ents, set] = await Promise.all([
+      const [ents, set, inc] = await Promise.all([
         supabase.from('month_entries').select('*').eq('month', k).order('due_day').order('name'),
         supabase.from('month_settings').select('salary').eq('month', k).maybeSingle(),
+        supabase.from('month_incomes').select('*').eq('month', k).order('created_at'),
       ])
       if (ents.error) throw ents.error
       if (set.error) throw set.error
+      if (inc.error) throw inc.error
       await loadTrend(k)
       if (id !== requestId) return
       entries.value = (ents.data ?? []).map(mapEntry)
       salary.value = toNum(set.data?.salary)
+      incomes.value = (inc.data ?? []).map(mapIncome)
     } catch (e) {
       if (id === requestId) toast.error(e)
     } finally {
@@ -119,6 +129,23 @@ export const useMonth = defineStore('month', () => {
       .upsert({ month: key.value, salary: value }, { onConflict: 'user_id,month' })
     if (error) return toast.error(error)
     await refreshTrend()
+  }
+
+  async function addIncome(description: string, amount: number) {
+    const { data, error } = await supabase
+      .from('month_incomes')
+      .insert({ month: key.value, description, amount })
+      .select()
+      .single()
+    if (error) return toast.error(error)
+    incomes.value.push(mapIncome(data))
+    toast.ok('Renda extra adicionada')
+  }
+
+  async function removeIncome(id: string) {
+    const { error } = await supabase.from('month_incomes').delete().eq('id', id)
+    if (error) return toast.error(error)
+    incomes.value = incomes.value.filter((i) => i.id !== id)
   }
 
   async function addOneOff(input: NewExpense) {
@@ -183,8 +210,8 @@ export const useMonth = defineStore('month', () => {
   }
 
   return {
-    key, salary, entries, trend, loading,
-    visible, total, paidTotal, pendingTotal, paidCount, estimateCount, byCategory, free, previousTotal,
-    load, saveSalary, addOneOff, addRecurring, updateEntry, togglePaid, removeEntry, restoreEntry,
+    key, salary, entries, incomes, trend, loading,
+    visible, total, paidTotal, pendingTotal, paidCount, estimateCount, byCategory, extraIncome, income, free, previousTotal,
+    load, saveSalary, addIncome, removeIncome, addOneOff, addRecurring, updateEntry, togglePaid, removeEntry, restoreEntry,
   }
 })

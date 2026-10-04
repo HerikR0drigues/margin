@@ -26,6 +26,8 @@ const financing = ref(false)
 const down = ref('')
 const installments = ref('48')
 const interest = ref('1,8')
+const shareMode = ref<'solo' | 'half' | 'custom'>('solo')
+const shareText = ref('50')
 const error = ref('')
 const busy = ref(false)
 
@@ -45,6 +47,9 @@ watch(open, (isOpen) => {
   down.value = g ? num2(g.down_payment) : ''
   installments.value = g?.installments ? String(g.installments) : '48'
   interest.value = g ? pctText(g.interest_pm) : '1,8'
+  const share = g?.my_share ?? 1
+  shareMode.value = share === 1 ? 'solo' : share === 0.5 ? 'half' : 'custom'
+  shareText.value = pctText(share).replace(',00', '')
 })
 
 async function submit() {
@@ -68,6 +73,8 @@ async function submit() {
     if (!(n >= 1 && n <= 120)) return void (error.value = 'Parcelas: de 1 a 120.')
     if (!Number.isFinite(i) || i < 0 || i > 0.1) return void (error.value = 'Juros mensais inválidos (use algo como 1,8).')
   }
+  const share = shareMode.value === 'solo' ? 1 : shareMode.value === 'half' ? 0.5 : parsePercent(shareText.value)
+  if (!Number.isFinite(share) || share <= 0 || share > 1) return void (error.value = 'Sua parte vai de 1% a 100%.')
   busy.value = true
   const input = {
     name: name.value.trim(),
@@ -80,6 +87,7 @@ async function submit() {
     down_payment: Math.round(d * 100) / 100,
     installments: n,
     interest_pm: i,
+    my_share: Math.round(share * 10000) / 10000,
   }
   if (props.goal) await store.update(props.goal.id, input)
   else await store.create(input)
@@ -107,13 +115,30 @@ async function submit() {
           </Select>
         </div>
       </div>
+      <div class="grid gap-1.5">
+        <Label for="g-share">Quem paga</Label>
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+          <Select id="g-share" v-model="shareMode">
+            <option value="solo">Só eu</option>
+            <option value="half">Eu e outra pessoa (metade cada)</option>
+            <option value="custom">Outra divisão</option>
+          </Select>
+          <div v-if="shareMode === 'custom'" class="flex w-28 items-center gap-2">
+            <Input v-model="shareText" type="text" inputmode="decimal" autocomplete="off" aria-label="Sua parte em porcentagem" />
+            <span class="text-sm text-muted-foreground">%</span>
+          </div>
+        </div>
+        <p v-if="shareMode !== 'solo'" class="text-xs text-muted-foreground">
+          Os valores abaixo são o total. O app calcula só a sua parte para guardar por mês.
+        </p>
+      </div>
       <div class="grid grid-cols-2 gap-3">
         <div class="grid gap-1.5">
-          <Label for="g-target">Valor total (R$)</Label>
+          <Label for="g-target">Valor total</Label>
           <MoneyInput id="g-target" v-model="target" />
         </div>
         <div class="grid gap-1.5">
-          <Label for="g-saved">Já guardado (R$)</Label>
+          <Label for="g-saved">Já guardado</Label>
           <MoneyInput id="g-saved" v-model="saved" />
         </div>
       </div>
@@ -136,7 +161,7 @@ async function submit() {
       </div>
       <div v-if="financing" class="grid grid-cols-3 gap-3">
         <div class="grid gap-1.5">
-          <Label for="g-down">Entrada (R$)</Label>
+          <Label for="g-down">Entrada</Label>
           <MoneyInput id="g-down" v-model="down" />
         </div>
         <div class="grid gap-1.5">

@@ -42,15 +42,18 @@
   --serious: #ec835a;
   --crit: #d03b3b;
 
-  /* categorias dos gráficos (ordem fixa, validada para fundo escuro) */
-  --chart-1: #3987e5;
-  --chart-2: #d95926;
-  --chart-3: #199e70;
-  --chart-4: #c98500;
-  --chart-5: #d55181;
-  --chart-6: #008300;
-  --chart-7: #9085e9;
-  --chart-8: #e66767;
+  /* Paleta dos gráficos: um único matiz (o da marca) que enfraquece a cada passo.
+     tom n (0..7): luminosidade cai 0,043 e saturação cai 0,0143 por passo, em OKLCH.
+     A ordem das categorias é fixa, então cada uma mantém sempre o mesmo tom. */
+  --chart-hue: 263;
+  --chart-1: oklch(calc(0.72 - 0 * 0.043) calc(0.17 - 0 * 0.0143) var(--chart-hue));
+  --chart-2: oklch(calc(0.72 - 1 * 0.043) calc(0.17 - 1 * 0.0143) var(--chart-hue));
+  --chart-3: oklch(calc(0.72 - 2 * 0.043) calc(0.17 - 2 * 0.0143) var(--chart-hue));
+  --chart-4: oklch(calc(0.72 - 3 * 0.043) calc(0.17 - 3 * 0.0143) var(--chart-hue));
+  --chart-5: oklch(calc(0.72 - 4 * 0.043) calc(0.17 - 4 * 0.0143) var(--chart-hue));
+  --chart-6: oklch(calc(0.72 - 5 * 0.043) calc(0.17 - 5 * 0.0143) var(--chart-hue));
+  --chart-7: oklch(calc(0.72 - 6 * 0.043) calc(0.17 - 6 * 0.0143) var(--chart-hue));
+  --chart-8: oklch(calc(0.72 - 7 * 0.043) calc(0.17 - 7 * 0.0143) var(--chart-hue));
 
   color-scheme: dark;
 }

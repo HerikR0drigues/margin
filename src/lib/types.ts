@@ -48,7 +48,32 @@ export interface Goal {
   down_payment: number
   installments: number | null
   interest_pm: number
+  /** parte do usuário no objetivo: 1 = tudo, 0.5 = dividido com outra pessoa */
+  my_share: number
   archived: boolean
+}
+
+export type ItemPayment = 'cash' | 'installments'
+
+export interface GoalItem {
+  id: string
+  goal_id: string
+  name: string
+  payment: ItemPayment
+  amount: number
+  down_payment: number
+  installments: number | null
+  installment_amount: number | null
+  first_month: string | null
+  paid_amount: number
+  paid_installments: number
+}
+
+export interface Income {
+  id: string
+  month: string
+  description: string
+  amount: number
 }
 
 export interface Contribution {

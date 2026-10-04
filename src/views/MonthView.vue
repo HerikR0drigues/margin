@@ -8,6 +8,7 @@ import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 import Input from '@/components/ui/Input.vue'
+import MoneyInput from '@/components/ui/MoneyInput.vue'
 import Segmented from '@/components/ui/Segmented.vue'
 import EntryDialog from '@/components/EntryDialog.vue'
 import DonutChart from '@/components/charts/DonutChart.vue'
@@ -57,12 +58,12 @@ function onSalaryBlur() {
 onBeforeUnmount(() => clearTimeout(salaryTimer))
 
 /* ---------- resumo ---------- */
-const ratio = computed(() => (month.salary > 0 ? month.total / month.salary : month.total > 0 ? Infinity : 0))
+const ratio = computed(() => (month.income > 0 ? month.total / month.income : month.total > 0 ? Infinity : 0))
 const sev = computed(() => severity(ratio.value))
 const sevIcon = { good: CircleCheck, warn: TriangleAlert, serious: TriangleAlert, crit: CircleAlert }
 const sevText = { good: 'text-brand-300', warn: 'text-warn', serious: 'text-serious', crit: 'text-crit' }
 const sevBar = { good: 'bg-brand-500', warn: 'bg-warn', serious: 'bg-serious', crit: 'bg-crit' }
-const left = computed(() => month.salary - month.total)
+const left = computed(() => month.income - month.total)
 const heroParts = computed(() => {
   const [int, dec] = num2(Math.abs(left.value)).split(',')
   return { neg: left.value < 0, int: int ?? '0', dec: dec ?? '00' }
@@ -73,15 +74,35 @@ const biggest = computed(() => {
   return best
 })
 const note = computed(() => {
-  if (month.salary <= 0) return 'Informe o salário do mês para ver quanto sobra.'
+  if (month.income <= 0) return 'Informe o salário do mês para ver quanto sobra.'
   if (!month.visible.length) return 'Nenhum gasto neste mês ainda.'
   const big = biggest.value
   return `${Math.round(ratio.value * 100)}% do salário vai para gastos fixos.${big ? ` O maior peso é ${categoryById(big.id).name} (${brl0(big.value)}).` : ''}`
 })
 const delta = computed(() => (month.previousTotal == null ? null : month.total - month.previousTotal))
 
-const plans = computed(() => goals.goals.map((g) => planGoal(planInput(g, goals.savedFor(g)), REAL)))
-const impact = computed(() => budgetImpact(month.salary, month.total, plans.value.map((p) => p.monthly)))
+const plans = computed(() => goals.goals.map((g) => planGoal(planInput(goals.effective(g), goals.savedFor(g)), REAL)))
+const impact = computed(() =>
+  budgetImpact(
+    month.income,
+    month.total,
+    plans.value.map((p, i) => p.monthly + goals.totals(goals.goals[i]!, month.key).myInstallmentsNow),
+  ),
+)
+
+/* ---------- rendas extras ---------- */
+const incomeName = ref('')
+const incomeAmount = ref('')
+const incomeError = ref('')
+async function addIncome() {
+  incomeError.value = ''
+  const v = parseMoney(incomeAmount.value)
+  if (!incomeName.value.trim()) return void (incomeError.value = 'Diga de onde veio.')
+  if (!Number.isFinite(v) || v <= 0) return void (incomeError.value = 'Informe o valor.')
+  await month.addIncome(incomeName.value.trim(), Math.round(v * 100) / 100)
+  incomeName.value = ''
+  incomeAmount.value = ''
+}
 
 /* ---------- gráficos ---------- */
 const activeCat = ref<string | null>(null)
@@ -163,11 +184,11 @@ function askRemove(e: MonthEntry) {
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-1.5">
         <Button variant="outline" size="icon" aria-label="Mês anterior" @click="go(-1)"><ChevronLeft /></Button>
-        <h1 class="min-w-[10rem] text-center text-xl font-semibold capitalize tracking-tight sm:text-2xl">
+        <h1 class="min-w-[10rem] text-center text-xl font-semibold tracking-tight first-letter:uppercase sm:text-2xl">
           {{ monthLabel(month.key) }}
         </h1>
         <Button variant="outline" size="icon" aria-label="Próximo mês" @click="go(1)"><ChevronRight /></Button>
-        <Button v-if="month.key !== REAL" variant="ghost" size="sm" @click="month.load(REAL)">Mês atual</Button>
+        <Button v-if="month.key !== REAL" variant="ghost" size="sm" @click="month.load(REAL)">Voltar para {{ monthName(REAL) }}</Button>
       </div>
       <Button @click="openNew"><Plus /> Novo gasto</Button>
     </div>
@@ -179,7 +200,7 @@ function askRemove(e: MonthEntry) {
           <h2 class="text-sm font-medium text-muted-foreground">
             {{ heroParts.neg ? 'Faltam em' : 'Sobra em' }} {{ monthName(month.key) }}
           </h2>
-          <span v-if="month.salary > 0" class="inline-flex items-center gap-1.5 text-[13px] font-medium">
+          <span v-if="month.income > 0" class="inline-flex items-center gap-1.5 text-[13px] font-medium">
             <component :is="sevIcon[sev.key]" class="size-4" :class="sevText[sev.key]" />
             {{ sev.label }}
           </span>
@@ -193,7 +214,7 @@ function askRemove(e: MonthEntry) {
         <div
           class="mt-4 h-2 overflow-hidden rounded-full bg-secondary"
           role="img"
-          :aria-label="month.salary > 0 ? `${sev.label}: ${Math.round(ratio * 100)}% do salário comprometido` : 'Salário não informado'"
+          :aria-label="month.income > 0 ? `${sev.label}: ${Math.round(ratio * 100)}% do salário comprometido` : 'Salário não informado'"
         >
           <div class="h-full rounded-full transition-[width] duration-500" :class="sevBar[sev.key]" :style="{ width: Math.min(ratio, 1) * 100 + '%' }" />
         </div>
@@ -201,6 +222,7 @@ function askRemove(e: MonthEntry) {
           <div>
             <dt class="text-xs text-muted-foreground">Salário</dt>
             <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.salary) }}</dd>
+            <dd v-if="month.extraIncome > 0" class="mt-0.5 text-xs text-brand-300">+ {{ brl(month.extraIncome) }} extras</dd>
           </div>
           <div>
             <dt class="text-xs text-muted-foreground">Gastos fixos</dt>
@@ -243,6 +265,30 @@ function askRemove(e: MonthEntry) {
         </Card>
         <Card>
           <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-medium">Rendas extras</h2>
+            <span v-if="month.extraIncome > 0" class="text-sm font-medium tabular-nums text-brand-300">+ {{ brl(month.extraIncome) }}</span>
+          </div>
+          <ul v-if="month.incomes.length" class="mt-2">
+            <li v-for="inc in month.incomes" :key="inc.id" class="flex items-center justify-between gap-2 border-t py-2 text-sm first:border-t-0">
+              <span class="min-w-0 truncate">{{ inc.description }}</span>
+              <span class="flex shrink-0 items-center gap-1">
+                <span class="font-medium tabular-nums">{{ brl(inc.amount) }}</span>
+                <Button variant="ghost" size="icon-sm" :aria-label="'Remover ' + inc.description" @click="month.removeIncome(inc.id)"><Trash2 /></Button>
+              </span>
+            </li>
+          </ul>
+          <p v-else class="mt-1 text-xs text-muted-foreground">Pix recebido, bônus, venda... entra na sobra deste mês.</p>
+          <form class="mt-3 grid gap-2" novalidate @submit.prevent="addIncome">
+            <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,9rem)] gap-2">
+              <Input v-model="incomeName" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: Pix da Niva" aria-label="Descrição da renda extra" />
+              <MoneyInput v-model="incomeAmount" aria-label="Valor da renda extra" />
+            </div>
+            <p v-if="incomeError" class="text-xs text-destructive" role="alert">{{ incomeError }}</p>
+            <Button type="submit" variant="outline" size="sm" class="justify-self-start"><Plus /> Adicionar</Button>
+          </form>
+        </Card>
+        <Card>
+          <div class="flex items-center justify-between gap-2">
             <h2 class="text-sm font-medium">Pagamentos</h2>
             <span class="text-xs text-muted-foreground">
               {{ month.visible.length ? `${month.paidCount} de ${month.visible.length} pagos` : 'Nenhum gasto' }}
@@ -275,7 +321,7 @@ function askRemove(e: MonthEntry) {
             :slices="slices"
             center-label="Gastos fixos"
             :center-value="brl0(month.total)"
-            :center-note="month.salary > 0 ? Math.round(ratio * 100) + '% do salário' : ''"
+            :center-note="month.income > 0 ? Math.round(ratio * 100) + '% da renda' : ''"
             :ariaLabel="`Gastos de ${monthLabel(month.key)} por categoria. Total ${brl(month.total)}.`"
           />
           <ul class="mt-4 grid gap-0.5">
@@ -297,7 +343,7 @@ function askRemove(e: MonthEntry) {
               <span class="text-right">
                 <b class="block font-medium tabular-nums">{{ brl(s.value) }}</b>
                 <small class="block text-xs text-muted-foreground">
-                  {{ month.salary > 0 ? Math.round((s.value / month.salary) * 100) + '% do salário' : Math.round((s.value / month.total) * 100) + '% dos gastos' }}
+                  {{ month.income > 0 ? Math.round((s.value / month.income) * 100) + '% da renda' : Math.round((s.value / month.total) * 100) + '% dos gastos' }}
                 </small>
               </span>
             </li>
