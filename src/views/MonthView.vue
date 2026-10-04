@@ -280,7 +280,7 @@ function askRemove(e: MonthEntry) {
           <p v-else class="mt-1 text-xs text-muted-foreground">Pix recebido, bônus, venda... entra na sobra deste mês.</p>
           <form class="mt-3 grid gap-2" novalidate @submit.prevent="addIncome">
             <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,9rem)] gap-2">
-              <Input v-model="incomeName" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: Pix da Niva" aria-label="Descrição da renda extra" />
+              <Input v-model="incomeName" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: Pix recebido" aria-label="Descrição da renda extra" />
               <MoneyInput v-model="incomeAmount" aria-label="Valor da renda extra" />
             </div>
             <p v-if="incomeError" class="text-xs text-destructive" role="alert">{{ incomeError }}</p>
