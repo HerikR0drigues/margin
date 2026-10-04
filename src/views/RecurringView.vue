@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Pencil, Plus, Repeat, Square } from '@lucide/vue'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
@@ -20,6 +20,8 @@ const ended = computed(() => store.items.filter((r) => r.end_month && r.end_mont
 const monthlyTotal = computed(() => active.value.reduce((s, r) => s + r.amount, 0))
 
 const newOpen = ref(false)
+// a recorrente nova é criada pelo store do mês; recarrega a lista quando o diálogo fecha
+watch(newOpen, (isOpen) => { if (!isOpen) void store.load() })
 const editOpen = ref(false)
 const editing = ref<Recurring | null>(null)
 function edit(r: Recurring) {
