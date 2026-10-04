@@ -36,7 +36,7 @@ async function logout() {
     <aside class="sticky top-0 hidden h-dvh flex-col border-r px-3 py-5 md:flex">
       <div class="px-2 pb-6">
         <div class="flex items-center gap-2">
-          <span class="grid size-7 place-items-center rounded-lg bg-primary text-[13px] font-bold text-primary-foreground">C</span>
+          <span class="grid size-7 place-items-center rounded-lg bg-primary text-[13px] font-bold text-primary-foreground">M</span>
           <span class="text-[15px] font-semibold tracking-tight">Margin</span>
         </div>
       </div>
@@ -73,7 +73,7 @@ async function logout() {
     <div class="min-w-0">
       <header class="flex items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] md:hidden">
         <div class="flex items-center gap-2">
-          <span class="grid size-6 place-items-center rounded-md bg-primary text-xs font-bold text-primary-foreground">C</span>
+          <span class="grid size-6 place-items-center rounded-md bg-primary text-xs font-bold text-primary-foreground">M</span>
           <span class="text-sm font-semibold tracking-tight">Margin</span>
         </div>
         <button type="button" class="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted" aria-label="Sair" @click="logout">

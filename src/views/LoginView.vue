@@ -35,7 +35,7 @@ async function submit() {
   <div class="grid min-h-dvh place-items-center px-4 py-10">
     <div class="w-full max-w-sm">
       <div class="mb-8 flex items-center gap-2.5">
-        <span class="grid size-9 place-items-center rounded-xl bg-primary text-base font-bold text-primary-foreground">C</span>
+        <span class="grid size-9 place-items-center rounded-xl bg-primary text-base font-bold text-primary-foreground">M</span>
         <span class="text-lg font-semibold tracking-tight">Margin</span>
       </div>
       <h1 class="text-2xl font-semibold tracking-tight">Entrar</h1>
