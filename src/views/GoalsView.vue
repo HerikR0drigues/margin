@@ -5,6 +5,7 @@ import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 import Input from '@/components/ui/Input.vue'
+import MoneyInput from '@/components/ui/MoneyInput.vue'
 import Slider from '@/components/ui/Slider.vue'
 import GoalDialog from '@/components/GoalDialog.vue'
 import ProjectionChart from '@/components/charts/ProjectionChart.vue'
@@ -212,14 +213,11 @@ function askRemove(g: Goal) {
         </div>
 
         <form class="flex items-center gap-2 border-t pt-4" @submit.prevent="contribute(c.g)">
-          <Input
+          <MoneyInput
             :model-value="amounts[c.g.id] ?? ''"
-            type="text"
-            inputmode="decimal"
-            autocomplete="off"
             :placeholder="c.contribution ? `Já aportou ${num2(c.contribution.amount)} este mês` : 'Aporte deste mês (R$)'"
             :aria-label="'Aporte em ' + c.g.name"
-            @update:model-value="(v) => (amounts = { ...amounts, [c.g.id]: String(v ?? '') })"
+            @update:model-value="(v) => (amounts = { ...amounts, [c.g.id]: v })"
           />
           <Button type="submit" variant="outline">Aportar</Button>
         </form>

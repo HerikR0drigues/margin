@@ -13,7 +13,7 @@ import EntryDialog from '@/components/EntryDialog.vue'
 import DonutChart from '@/components/charts/DonutChart.vue'
 import TrendChart from '@/components/charts/TrendChart.vue'
 import { CATEGORIES, categoryById } from '@/lib/categories'
-import { addMonths, brl, brl0, currentMonthKey, monthLabel, monthName, num2, parseMoney } from '@/lib/format'
+import { addMonths, brl, brl0, currentMonthKey, monthLabel, monthName, num2, maskMoney, parseMoney } from '@/lib/format'
 import { planInput } from '@/lib/goal-plan'
 import { budgetImpact, planGoal, severity } from '@/lib/planner'
 import type { MonthEntry } from '@/lib/types'
@@ -44,6 +44,7 @@ watch(
 )
 let salaryTimer: ReturnType<typeof setTimeout> | undefined
 function onSalaryInput() {
+  salaryText.value = maskMoney(salaryText.value)
   const v = parseMoney(salaryText.value)
   const value = Number.isFinite(v) && v >= 0 ? v : 0
   month.salary = value
@@ -358,9 +359,10 @@ function askRemove(e: MonthEntry) {
               :id="'amt-' + e.id"
               v-model="amountText"
               type="text"
-              inputmode="decimal"
+              inputmode="numeric"
               :aria-label="'Valor de ' + e.name"
               class="h-8 w-28 rounded-md border border-input bg-transparent px-2 text-right tabular-nums"
+              @input="amountText = maskMoney(amountText)"
               @blur="commitAmount(e)"
               @keydown.enter="($event.target as HTMLInputElement).blur()"
               @keydown.esc="editingAmount = null"

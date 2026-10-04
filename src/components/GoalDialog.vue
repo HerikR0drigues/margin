@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import Dialog from '@/components/ui/Dialog.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
+import MoneyInput from '@/components/ui/MoneyInput.vue'
 import Label from '@/components/ui/Label.vue'
 import Select from '@/components/ui/Select.vue'
 import Switch from '@/components/ui/Switch.vue'
@@ -109,11 +110,11 @@ async function submit() {
       <div class="grid grid-cols-2 gap-3">
         <div class="grid gap-1.5">
           <Label for="g-target">Valor total (R$)</Label>
-          <Input id="g-target" v-model="target" type="text" inputmode="decimal" autocomplete="off" />
+          <MoneyInput id="g-target" v-model="target" />
         </div>
         <div class="grid gap-1.5">
           <Label for="g-saved">Já guardado (R$)</Label>
-          <Input id="g-saved" v-model="saved" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" />
+          <MoneyInput id="g-saved" v-model="saved" />
         </div>
       </div>
       <div class="grid grid-cols-2 gap-3">
@@ -136,7 +137,7 @@ async function submit() {
       <div v-if="financing" class="grid grid-cols-3 gap-3">
         <div class="grid gap-1.5">
           <Label for="g-down">Entrada (R$)</Label>
-          <Input id="g-down" v-model="down" type="text" inputmode="decimal" autocomplete="off" />
+          <MoneyInput id="g-down" v-model="down" />
         </div>
         <div class="grid gap-1.5">
           <Label for="g-n">Parcelas</Label>

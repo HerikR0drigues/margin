@@ -74,3 +74,15 @@ export const monthShortYear = (key: string) => `${monthShort(key)} ’${String(m
 /** Valor para <input type="month"> */
 export const toMonthInput = (key: string) => key.slice(0, 7)
 export const fromMonthInput = (v: string) => `${v}-01`
+
+/**
+ * Máscara de moeda estilo caixa registradora: só dígitos entram e preenchem da direita.
+ * "123456" → "1.234,56". Vazio fica vazio. O resultado é aceito por `parseMoney`.
+ */
+export function maskMoney(input: string): string {
+  const digits = String(input).replace(/\D/g, '').replace(/^0+/, '').slice(0, 12)
+  if (!digits) return ''
+  const padded = digits.padStart(3, '0')
+  const int = padded.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${int},${padded.slice(-2)}`
+}

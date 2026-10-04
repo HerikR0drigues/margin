@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import Dialog from '@/components/ui/Dialog.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
+import MoneyInput from '@/components/ui/MoneyInput.vue'
 import Label from '@/components/ui/Label.vue'
 import Select from '@/components/ui/Select.vue'
 import Segmented from '@/components/ui/Segmented.vue'
@@ -80,7 +81,7 @@ async function submit() {
       <div class="grid grid-cols-[minmax(0,1fr)_92px] gap-3">
         <div class="grid gap-1.5">
           <Label for="r-amount">{{ kind === 'variable' ? 'Valor esperado' : 'Valor' }} (R$)</Label>
-          <Input id="r-amount" v-model="amount" type="text" inputmode="decimal" autocomplete="off" />
+          <MoneyInput id="r-amount" v-model="amount" />
         </div>
         <div class="grid gap-1.5">
           <Label for="r-day">Vence dia</Label>
