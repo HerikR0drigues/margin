@@ -338,7 +338,7 @@ export const useMonth = defineStore('month', () => {
       const { error } = await supabase.from('month_entries').update({ skipped: true }).eq('id', entry.id)
       if (error) return toast.error(error)
       entry.skipped = true
-      toast.ok('Pulado neste mês')
+      toast.ok('Pulado neste mês. Para voltar, use "Restaurar" no fim da lista.')
     } else {
       const { error } = await supabase.from('month_entries').delete().eq('id', entry.id)
       if (error) return toast.error(error)

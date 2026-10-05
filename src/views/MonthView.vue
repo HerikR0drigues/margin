@@ -582,7 +582,7 @@ function askRemove(e: MonthEntry) {
               size="icon-sm"
               :class="confirmId === e.id ? 'text-destructive' : ''"
               :aria-label="(e.recurring_id ? 'Pular neste mês: ' : 'Excluir: ') + e.name"
-              :title="confirmId === e.id ? 'Clique de novo para confirmar' : e.recurring_id ? 'Pular neste mês' : 'Excluir'"
+              :title="confirmId === e.id ? (e.card_bill ? 'Isto tira a fatura e tudo o que está dentro dela deste mês. Clique de novo para confirmar' : 'Clique de novo para confirmar') : e.card_bill ? 'Pular a fatura inteira neste mês' : e.recurring_id ? 'Pular neste mês' : 'Excluir'"
               @click="askRemove(e)"
             >
               <component :is="e.recurring_id ? SkipForward : Trash2" />
