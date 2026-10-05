@@ -5,7 +5,12 @@ import { toNum, type ExpenseKind, type Recurring } from '@/lib/types'
 import { useToast } from './toast'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const map = (r: any): Recurring => ({ ...r, amount: toNum(r.amount), due_day: Number(r.due_day) })
+const map = (r: any): Recurring => ({
+  ...r,
+  amount: toNum(r.amount),
+  due_day: Number(r.due_day),
+  reimbursement: toNum(r.reimbursement ?? 0),
+})
 
 export interface RecurringPatch {
   name: string
@@ -14,6 +19,7 @@ export interface RecurringPatch {
   amount: number
   due_day: number
   on_card: boolean
+  reimbursement: number
 }
 
 export const useRecurring = defineStore('recurring', () => {

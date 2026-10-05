@@ -4,11 +4,11 @@ import type { Goal, GoalItem } from './types'
 
 const cash = (o: Partial<GoalItem> = {}): GoalItem => ({
   id: 'c', goal_id: 'g', name: 'Passagens', payment: 'cash', amount: 4000, down_payment: 0,
-  installments: null, installment_amount: null, first_month: null, paid_amount: 0, paid_installments: 0, ...o,
+  installments: null, installment_amount: null, first_month: null, paid_amount: 0, paid_installments: 0, reimbursement: 0, reimbursed: false, ...o,
 })
 const parc = (o: Partial<GoalItem> = {}): GoalItem => ({
   id: 'p', goal_id: 'g', name: 'Hotel', payment: 'installments', amount: 3000, down_payment: 500,
-  installments: 5, installment_amount: 540, first_month: '2026-11-01', paid_amount: 500, paid_installments: 1, ...o,
+  installments: 5, installment_amount: 540, first_month: '2026-11-01', paid_amount: 500, paid_installments: 1, reimbursement: 0, reimbursed: false, ...o,
 })
 const goal = (o: Partial<Goal> = {}): Goal => ({
   id: 'g', name: 'Viagem', kind: 'trip', target_amount: 20000, saved_amount: 0, target_date: '2027-06-01',
@@ -32,6 +32,28 @@ describe('summarizeItem', () => {
   })
   it('juros nunca ficam negativos', () => {
     expect(summarizeItem(parc({ amount: 9999 })).interest).toBe(0)
+  })
+})
+
+describe('reembolso', () => {
+  it('abate o custo e o que falta pagar, sem passar do custo', () => {
+    const s = summarizeItem(cash({ reimbursement: 3000 }))
+    expect(s.netTotal).toBe(1000)
+    expect(s.remaining).toBe(1000)
+    expect(summarizeItem(cash({ reimbursement: 9000 })).netTotal).toBe(0)
+  })
+  it('na parte do usuário, o reembolso abate depois de dividir', () => {
+    const t = totalsFor([cash({ reimbursement: 1000 })], 0.5, '2026-12-01')
+    expect(t.myTotal).toBe(1000) // 4000 × 0,5 − 1000
+    expect(t.reimbursement).toBe(1000)
+    expect(t.myRemaining).toBe(1000)
+  })
+  it('reduz o valor a guardar; em itens parcelados só reduz o custo total', () => {
+    const e = effectiveGoal(goal(), [cash({ reimbursement: 1000 })])
+    expect(e.target_amount).toBe(1000) // 4000 × 0,5 − 1000
+    const p = effectiveGoal(goal(), [parc({ reimbursement: 400 })])
+    expect(p.target_amount).toBe(250) // só a entrada: 500 × 0,5
+    expect(summarizeItem(parc({ reimbursement: 400 })).remaining).toBe(1760) // 3200 − 400 − 1040
   })
 })
 

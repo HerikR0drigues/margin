@@ -19,36 +19,50 @@ export interface ItemSummary {
   interest: number
   /** mês da última parcela, se parcelado */
   lastMonth: string | null
+  /** reembolso esperado (nunca passa do custo total) */
+  reimbursement: number
+  /** custo depois do reembolso */
+  netTotal: number
+  /** reembolso que abate o valor a guardar agora (só itens à vista) */
+  cashReimbursement: number
 }
 
 export function summarizeItem(i: GoalItem): ItemSummary {
   if (i.payment === 'cash') {
+    const reimb = Math.min(i.reimbursement ?? 0, i.amount)
     return {
       total: i.amount,
       paid: i.paid_amount,
-      remaining: Math.max(i.amount - i.paid_amount, 0),
+      remaining: Math.max(i.amount - reimb - i.paid_amount, 0),
       cashNeeded: i.amount,
       cashPaid: i.paid_amount,
       installmentsLeft: 0,
       installmentAmount: 0,
       interest: 0,
       lastMonth: null,
+      reimbursement: reimb,
+      netTotal: i.amount - reimb,
+      cashReimbursement: reimb,
     }
   }
   const n = i.installments ?? 0
   const parcel = i.installment_amount ?? 0
   const total = r2(i.down_payment + n * parcel)
   const paid = r2(i.paid_amount + i.paid_installments * parcel)
+  const reimb = Math.min(i.reimbursement ?? 0, total)
   return {
     total,
     paid,
-    remaining: Math.max(r2(total - paid), 0),
+    remaining: Math.max(r2(total - reimb - paid), 0),
     cashNeeded: i.down_payment,
     cashPaid: i.paid_amount,
     installmentsLeft: Math.max(n - i.paid_installments, 0),
     installmentAmount: parcel,
     interest: Math.max(r2(total - i.amount), 0),
     lastMonth: i.first_month && n > 0 ? addMonths(i.first_month, n - 1) : null,
+    reimbursement: reimb,
+    netTotal: r2(total - reimb),
+    cashReimbursement: 0,
   }
 }
 
@@ -65,7 +79,9 @@ export interface GoalTotals {
   total: number
   paid: number
   remaining: number
-  /** a parte do usuário, depois de dividir */
+  /** reembolsos esperados (já são do usuário, não se dividem) */
+  reimbursement: number
+  /** a parte do usuário, depois de dividir e abater o reembolso */
   myTotal: number
   myPaid: number
   myRemaining: number
@@ -77,24 +93,27 @@ export interface GoalTotals {
 export function totalsFor(items: GoalItem[], share: number, month: string): GoalTotals {
   let total = 0
   let paid = 0
-  let remaining = 0
+  let reimb = 0
   let interest = 0
   let now = 0
   for (const i of items) {
     const s = summarizeItem(i)
     total += s.total
     paid += s.paid
-    remaining += s.remaining
+    reimb += s.reimbursement
     interest += s.interest
     now += installmentDue(i, month)
   }
+  const myTotal = Math.max(r2(total * share - reimb), 0)
+  const myPaid = r2(paid * share)
   return {
     total: r2(total),
     paid: r2(paid),
-    remaining: r2(remaining),
-    myTotal: r2(total * share),
-    myPaid: r2(paid * share),
-    myRemaining: r2(remaining * share),
+    remaining: Math.max(r2(total - reimb - paid), 0),
+    reimbursement: r2(reimb),
+    myTotal,
+    myPaid,
+    myRemaining: Math.max(r2(myTotal - myPaid), 0),
     myInstallmentsNow: r2(now * share),
     interest: r2(interest),
   }
@@ -112,14 +131,17 @@ export function effectiveGoal(goal: Goal, items: GoalItem[]): Goal {
   }
   let cash = 0
   let cashPaid = 0
+  let cashReimb = 0
   for (const i of items) {
     const s = summarizeItem(i)
     cash += s.cashNeeded
     cashPaid += s.cashPaid
+    cashReimb += s.cashReimbursement
   }
   return {
     ...goal,
-    target_amount: r2(cash * share),
+    // o reembolso é de quem recebe (o usuário): abate depois de dividir
+    target_amount: Math.max(r2(cash * share - cashReimb), 0),
     saved_amount: r2(goal.saved_amount + cashPaid * share),
     financing: false,
     down_payment: 0,

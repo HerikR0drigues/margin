@@ -42,18 +42,17 @@
   --serious: #ec835a;
   --crit: #d03b3b;
 
-  /* Paleta dos gráficos: um único matiz (o da marca) que enfraquece a cada passo.
-     tom n (0..7): luminosidade cai 0,043 e saturação cai 0,0143 por passo, em OKLCH.
-     A ordem das categorias é fixa, então cada uma mantém sempre o mesmo tom. */
-  --chart-hue: 263;
-  --chart-1: oklch(calc(0.72 - 0 * 0.043) calc(0.17 - 0 * 0.0143) var(--chart-hue));
-  --chart-2: oklch(calc(0.72 - 1 * 0.043) calc(0.17 - 1 * 0.0143) var(--chart-hue));
-  --chart-3: oklch(calc(0.72 - 2 * 0.043) calc(0.17 - 2 * 0.0143) var(--chart-hue));
-  --chart-4: oklch(calc(0.72 - 3 * 0.043) calc(0.17 - 3 * 0.0143) var(--chart-hue));
-  --chart-5: oklch(calc(0.72 - 4 * 0.043) calc(0.17 - 4 * 0.0143) var(--chart-hue));
-  --chart-6: oklch(calc(0.72 - 5 * 0.043) calc(0.17 - 5 * 0.0143) var(--chart-hue));
-  --chart-7: oklch(calc(0.72 - 6 * 0.043) calc(0.17 - 6 * 0.0143) var(--chart-hue));
-  --chart-8: oklch(calc(0.72 - 7 * 0.043) calc(0.17 - 7 * 0.0143) var(--chart-hue));
+  /* Paleta dos gráficos: o azul da marca no máximo e, a cada passo, mais diluído na superfície.
+     Força do tom n = 100% × 0,83^n (100, 83, 69, 57, 47, 39, 32, 27). Os degraus são maiores
+     no começo, onde ficam as categorias mais usadas. Cada categoria mantém sempre o mesmo tom. */
+  --chart-1: var(--primary);
+  --chart-2: color-mix(in oklab, var(--primary) 83%, var(--card));
+  --chart-3: color-mix(in oklab, var(--primary) 69%, var(--card));
+  --chart-4: color-mix(in oklab, var(--primary) 57%, var(--card));
+  --chart-5: color-mix(in oklab, var(--primary) 47%, var(--card));
+  --chart-6: color-mix(in oklab, var(--primary) 39%, var(--card));
+  --chart-7: color-mix(in oklab, var(--primary) 32%, var(--card));
+  --chart-8: color-mix(in oklab, var(--primary) 27%, var(--card));
 
   color-scheme: dark;
 }

@@ -27,6 +27,7 @@ const mapItem = (r: any): GoalItem => ({
   installments: r.installments == null ? null : Number(r.installments),
   installment_amount: r.installment_amount == null ? null : toNum(r.installment_amount),
   paid_installments: Number(r.paid_installments ?? 0),
+  reimbursement: toNum(r.reimbursement ?? 0),
 })
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapContribution = (r: any): Contribution => ({ ...r, amount: toNum(r.amount) })

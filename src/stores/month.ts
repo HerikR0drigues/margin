@@ -17,7 +17,17 @@ export interface TrendMonth {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mapIncome = (r: any): Income => ({ ...r, amount: toNum(r.amount) })
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mapEntry = (r: any): MonthEntry => ({ ...r, amount: toNum(r.amount), due_day: Number(r.due_day) })
+const mapEntry = (r: any): MonthEntry => ({
+  ...r,
+  amount: toNum(r.amount),
+  due_day: Number(r.due_day),
+  reimbursement: toNum(r.reimbursement ?? 0),
+})
+
+/** Custo real do gasto: valor menos o reembolso (nunca negativo). */
+export const netOf = (e: { amount: number; reimbursement: number }) => Math.max(e.amount - e.reimbursement, 0)
+/** Reembolso que de fato abate (não passa do valor). */
+const reimbOf = (e: { amount: number; reimbursement: number }) => Math.min(e.reimbursement, e.amount)
 
 export interface NewExpense {
   name: string
@@ -25,6 +35,7 @@ export interface NewExpense {
   amount: number
   due_day: number
   on_card?: boolean
+  reimbursement?: number
 }
 
 export const useMonth = defineStore('month', () => {
@@ -38,8 +49,12 @@ export const useMonth = defineStore('month', () => {
   let requestId = 0
 
   const visible = computed(() => entries.value.filter((e) => !e.skipped))
-  const total = computed(() => visible.value.reduce((s, e) => s + e.amount, 0))
-  const paidTotal = computed(() => visible.value.filter((e) => e.paid).reduce((s, e) => s + e.amount, 0))
+  /** custo líquido do mês (já abatidos os reembolsos) */
+  const total = computed(() => visible.value.reduce((s, e) => s + netOf(e), 0))
+  const paidTotal = computed(() => visible.value.filter((e) => e.paid).reduce((s, e) => s + netOf(e), 0))
+  /** reembolsos ainda não recebidos e já recebidos neste mês */
+  const reimbPending = computed(() => visible.value.filter((e) => !e.reimbursed).reduce((s, e) => s + reimbOf(e), 0))
+  const reimbReceived = computed(() => visible.value.filter((e) => e.reimbursed).reduce((s, e) => s + reimbOf(e), 0))
   const pendingTotal = computed(() => total.value - paidTotal.value)
   const cardTotal = computed(() => visible.value.filter((e) => e.on_card).reduce((s, e) => s + e.amount, 0))
   const cardCount = computed(() => visible.value.filter((e) => e.on_card).length)
@@ -47,7 +62,7 @@ export const useMonth = defineStore('month', () => {
   const estimateCount = computed(() => visible.value.filter((e) => e.is_estimate).length)
   const byCategory = computed(() => {
     const out: Record<string, number> = {}
-    for (const e of visible.value) out[e.category] = (out[e.category] ?? 0) + e.amount
+    for (const e of visible.value) out[e.category] = (out[e.category] ?? 0) + netOf(e)
     return out
   })
   const extraIncome = computed(() => incomes.value.reduce((s, i) => s + i.amount, 0))
@@ -62,7 +77,7 @@ export const useMonth = defineStore('month', () => {
   async function loadTrend(k: string) {
     const from = addMonths(k, -11)
     const [ents, sets] = await Promise.all([
-      supabase.from('month_entries').select('month, category, amount').gte('month', from).lte('month', k).eq('skipped', false),
+      supabase.from('month_entries').select('month, category, amount, reimbursement').gte('month', from).lte('month', k).eq('skipped', false),
       supabase.from('month_settings').select('month, salary').gte('month', from).lte('month', k),
     ])
     if (ents.error) throw ents.error
@@ -75,7 +90,7 @@ export const useMonth = defineStore('month', () => {
     for (const r of ents.data ?? []) {
       const m = idx.get(r.month as string)
       if (!m) continue
-      const amount = toNum(r.amount)
+      const amount = netOf({ amount: toNum(r.amount), reimbursement: toNum(r.reimbursement ?? 0) })
       m.byCategory[r.category as string] = (m.byCategory[r.category as string] ?? 0) + amount
       m.total += amount
       m.hasData = true
@@ -190,6 +205,17 @@ export const useMonth = defineStore('month', () => {
   }
 
   /** Recorrente: pula só este mês. Avulso: exclui. */
+  /** Marca o reembolso deste gasto como recebido (ou volta para pendente). */
+  async function toggleReimbursed(entry: MonthEntry) {
+    const reimbursed = !entry.reimbursed
+    entry.reimbursed = reimbursed
+    const { error } = await supabase.from('month_entries').update({ reimbursed }).eq('id', entry.id)
+    if (error) {
+      entry.reimbursed = !reimbursed
+      toast.error(error)
+    }
+  }
+
   async function removeEntry(entry: MonthEntry) {
     if (entry.recurring_id) {
       const { error } = await supabase.from('month_entries').update({ skipped: true }).eq('id', entry.id)
@@ -214,7 +240,7 @@ export const useMonth = defineStore('month', () => {
 
   return {
     key, salary, entries, incomes, trend, loading,
-    visible, total, cardTotal, cardCount, paidTotal, pendingTotal, paidCount, estimateCount, byCategory, extraIncome, income, free, previousTotal,
-    load, saveSalary, addIncome, removeIncome, addOneOff, addRecurring, updateEntry, togglePaid, removeEntry, restoreEntry,
+    visible, total, reimbPending, reimbReceived, cardTotal, cardCount, paidTotal, pendingTotal, paidCount, estimateCount, byCategory, extraIncome, income, free, previousTotal,
+    load, saveSalary, addIncome, removeIncome, addOneOff, addRecurring, toggleReimbursed, updateEntry, togglePaid, removeEntry, restoreEntry,
   }
 })

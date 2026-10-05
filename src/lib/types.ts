@@ -24,6 +24,9 @@ export interface MonthEntry {
   is_estimate: boolean
   skipped: boolean
   on_card: boolean
+  /** quanto você vai receber de volta por este gasto */
+  reimbursement: number
+  reimbursed: boolean
 }
 
 export interface Recurring {
@@ -36,6 +39,7 @@ export interface Recurring {
   start_month: string
   end_month: string | null
   on_card: boolean
+  reimbursement: number
 }
 
 export interface Goal {
@@ -69,6 +73,8 @@ export interface GoalItem {
   first_month: string | null
   paid_amount: number
   paid_installments: number
+  reimbursement: number
+  reimbursed: boolean
 }
 
 export interface Income {

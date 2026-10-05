@@ -6,6 +6,7 @@ import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
 import Segmented from '@/components/ui/Segmented.vue'
+import Switch from '@/components/ui/Switch.vue'
 import { addMonths, brl, currentMonthKey, fromMonthInput, num2, parseMoney, toMonthInput } from '@/lib/format'
 import type { GoalItem, ItemPayment } from '@/lib/types'
 import { useGoals, type GoalItemInput } from '@/stores/goals'
@@ -28,6 +29,8 @@ const parcel = ref('')
 const first = ref('')
 const paidAmount = ref('')
 const paidInstallments = ref('0')
+const reimbursement = ref('')
+const reimbursed = ref(false)
 const error = ref('')
 const busy = ref(false)
 
@@ -44,6 +47,8 @@ watch(open, (isOpen) => {
   first.value = toMonthInput(i?.first_month ?? addMonths(currentMonthKey(), 1))
   paidAmount.value = i && i.paid_amount ? num2(i.paid_amount) : ''
   paidInstallments.value = String(i?.paid_installments ?? 0)
+  reimbursement.value = i && i.reimbursement ? num2(i.reimbursement) : ''
+  reimbursed.value = i?.reimbursed ?? false
 })
 
 const money = (t: string) => (t.trim() ? parseMoney(t) : 0)
@@ -68,13 +73,17 @@ async function submit() {
   if (!Number.isFinite(a) || a <= 0) return void (error.value = 'Informe o valor do item.')
   if (!Number.isFinite(paid) || paid < 0) return void (error.value = 'O valor já pago é inválido.')
 
+  const reimb = money(reimbursement.value)
+  if (!Number.isFinite(reimb) || reimb < 0) return void (error.value = 'O reembolso é inválido.')
+  if (reimb > a) return void (error.value = 'O reembolso não pode ser maior que o valor do item.')
+  const refund = { reimbursement: round(reimb), reimbursed: reimb > 0 && reimbursed.value }
   let input: GoalItemInput
   if (payment.value === 'cash') {
     if (paid > a) return void (error.value = 'O que você já pagou não pode passar do valor do item.')
     input = {
       name: name.value.trim(), payment: 'cash', amount: round(a), down_payment: 0,
       installments: null, installment_amount: null, first_month: null,
-      paid_amount: round(paid), paid_installments: 0,
+      paid_amount: round(paid), paid_installments: 0, ...refund,
     }
   } else {
     const d = money(down.value)
@@ -90,7 +99,7 @@ async function submit() {
     input = {
       name: name.value.trim(), payment: 'installments', amount: round(a), down_payment: round(d),
       installments: count, installment_amount: round(p), first_month: fromMonthInput(first.value),
-      paid_amount: round(paid), paid_installments: done,
+      paid_amount: round(paid), paid_installments: done, ...refund,
     }
   }
   busy.value = true
@@ -170,6 +179,16 @@ const round = (v: number) => Math.round(v * 100) / 100
           Custo total: {{ brl(preview.total) }}<span v-if="preview.interest > 0"> (juros de {{ brl(preview.interest) }})</span>.
         </p>
       </template>
+
+      <div class="grid gap-1.5">
+        <Label for="i-reimb">Reembolso esperado (opcional)</Label>
+        <MoneyInput id="i-reimb" v-model="reimbursement" />
+        <p class="text-xs text-muted-foreground">O que vão devolver a você por este item. Reduz o que você precisa guardar.</p>
+      </div>
+      <div v-if="money(reimbursement) > 0" class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
+        <Label for="i-got" class="cursor-pointer">Reembolso já recebido</Label>
+        <Switch id="i-got" v-model="reimbursed" />
+      </div>
 
       <p v-if="error" class="text-sm text-destructive" role="alert">{{ error }}</p>
       <div class="flex justify-end gap-2 pt-1">

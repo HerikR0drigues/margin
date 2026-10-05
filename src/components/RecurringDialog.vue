@@ -23,6 +23,7 @@ const kind = ref<string>('fixed')
 const amount = ref('')
 const dueDay = ref('10')
 const onCard = ref(false)
+const reimbursement = ref('')
 const from = ref('this')
 const error = ref('')
 
@@ -38,6 +39,7 @@ watch(open, (isOpen) => {
   amount.value = num2(props.item.amount)
   dueDay.value = String(props.item.due_day)
   onCard.value = props.item.on_card
+  reimbursement.value = props.item.reimbursement ? num2(props.item.reimbursement) : ''
   from.value = 'this'
 })
 
@@ -49,6 +51,9 @@ async function submit() {
   if (!name.value.trim()) return void (error.value = 'Dê um nome ao gasto.')
   if (!Number.isFinite(value) || value < 0) return void (error.value = 'Informe um valor válido.')
   if (!(day >= 1 && day <= 31)) return void (error.value = 'O dia de vencimento vai de 1 a 31.')
+  const reimb = reimbursement.value.trim() ? parseMoney(reimbursement.value) : 0
+  if (!Number.isFinite(reimb) || reimb < 0) return void (error.value = 'O reembolso é inválido.')
+  if (reimb > value) return void (error.value = 'O reembolso não pode ser maior que o valor do gasto.')
   await store.update(
     props.item.id,
     {
@@ -58,6 +63,7 @@ async function submit() {
       amount: Math.round(value * 100) / 100,
       due_day: day,
       on_card: onCard.value,
+      reimbursement: Math.round(reimb * 100) / 100,
     },
     from.value === 'this' ? thisMonth : nextMonth,
   )
@@ -98,6 +104,11 @@ async function submit() {
           <span class="block text-xs font-normal text-muted-foreground">Continua contando como gasto. Se já lança a fatura inteira como gasto, não repita aqui.</span>
         </Label>
         <Switch id="r-card" v-model="onCard" />
+      </div>
+      <div class="grid gap-1.5">
+        <Label for="r-reimb">Reembolso esperado (opcional)</Label>
+        <MoneyInput id="r-reimb" v-model="reimbursement" />
+        <p class="text-xs text-muted-foreground">Quanto vão devolver a você por este gasto. O custo no mês é o valor menos o reembolso.</p>
       </div>
       <div class="grid gap-1.5">
         <Label for="r-cat">Categoria</Label>

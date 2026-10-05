@@ -17,7 +17,7 @@ onMounted(() => void store.load())
 const NOW = currentMonthKey()
 const active = computed(() => store.items.filter((r) => !r.end_month || r.end_month >= NOW))
 const ended = computed(() => store.items.filter((r) => r.end_month && r.end_month < NOW))
-const monthlyTotal = computed(() => active.value.reduce((s, r) => s + r.amount, 0))
+const monthlyTotal = computed(() => active.value.reduce((s, r) => s + Math.max(r.amount - r.reimbursement, 0), 0))
 
 const newOpen = ref(false)
 // a recorrente nova é criada pelo store do mês; recarrega a lista quando o diálogo fecha
@@ -50,7 +50,7 @@ function askEnd(r: Recurring) {
       <div>
         <h1 class="text-xl font-semibold tracking-tight sm:text-2xl">Gastos recorrentes</h1>
         <p class="mt-1 text-sm text-muted-foreground">
-          Os modelos que se repetem todo mês. {{ active.length }} ativos, {{ brl(monthlyTotal) }} por mês em valores base.
+          Os modelos que se repetem todo mês. {{ active.length }} ativos, {{ brl(monthlyTotal) }} por mês em valores base (já sem os reembolsos).
         </p>
       </div>
       <Button @click="newOpen = true"><Plus /> Nova recorrente</Button>
@@ -72,6 +72,7 @@ function askEnd(r: Recurring) {
               <span>vence dia {{ r.due_day }}</span>
               <Badge :variant="r.kind === 'variable' ? 'primary' : 'outline'">{{ r.kind === 'variable' ? 'variável' : 'fixa' }}</Badge>
               <Badge v-if="r.on_card" variant="outline"><CreditCard /> cartão</Badge>
+              <Badge v-if="r.reimbursement > 0" variant="primary">reembolso {{ brl(r.reimbursement) }}</Badge>
               <span v-if="r.end_month">até {{ monthLabel(r.end_month) }}</span>
             </div>
           </div>

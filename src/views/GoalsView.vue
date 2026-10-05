@@ -96,11 +96,14 @@ function askRemoveItem(i: GoalItem) {
 }
 function itemLine(i: GoalItem) {
   const s = summarizeItem(i)
-  if (i.payment === 'cash') return { tag: 'À vista', detail: s.paid > 0 ? `${brl(s.paid)} de ${brl(s.total)} pagos` : '' }
+  const refund = s.reimbursement > 0 ? `reembolso ${brl(s.reimbursement)} ${i.reimbursed ? 'recebido' : 'a receber'}` : ''
+  if (i.payment === 'cash') {
+    return { tag: 'À vista', detail: [s.paid > 0 ? `${brl(s.paid)} de ${brl(s.total)} pagos` : '', refund].filter(Boolean).join(' · ') }
+  }
   const done = i.paid_installments
   return {
     tag: `${i.installments}× ${brl(s.installmentAmount)}`,
-    detail: `${done} de ${i.installments} parcelas pagas${i.down_payment ? ` · entrada ${brl(i.down_payment)}` : ''}`,
+    detail: `${done} de ${i.installments} parcelas pagas${i.down_payment ? ` · entrada ${brl(i.down_payment)}` : ''}${refund ? ' · ' + refund : ''}`,
   }
 }
 
@@ -283,6 +286,9 @@ function askRemove(g: Goal) {
           </dl>
           <p v-if="c.totals.myInstallmentsNow > 0" class="border-t px-3 py-2.5 text-xs text-muted-foreground">
             Parcelas deste mês: {{ brl(c.totals.myInstallmentsNow) }} (já entram no peso do mês).
+          </p>
+          <p v-if="c.totals.reimbursement > 0" class="border-t px-3 py-2.5 text-xs text-muted-foreground">
+            Reembolsos esperados: {{ brl(c.totals.reimbursement) }} (já abatidos do que você precisa guardar).
           </p>
           <p v-if="c.totals.interest > 0" class="border-t px-3 py-2.5 text-xs text-muted-foreground">
             Juros embutidos nas parcelas: {{ brl(c.totals.interest) }}.

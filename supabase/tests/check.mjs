@@ -124,6 +124,19 @@ ok(nfx2[0].on_card === false, 'mudar o marcador no modelo propaga para os meses 
 await db.query("insert into month_entries (month, name, category, amount, due_day, on_card) values ('2026-07-01', 'Presente', 'outros', 80, 20, true)")
 ok((await q("select 1 from month_entries where on_card and name = 'Presente'")).length === 1, 'gasto avulso pode ser marcado como cartão')
 
+// --- reembolso: copiado do modelo recorrente para os meses e limitado ao valor no item de objetivo
+const [{ id: claude }] = await q("insert into recurring_expenses (name, category, kind, amount, due_day, start_month, on_card, reimbursement) values ('Claude','assinaturas','fixed',110,3,'2026-06-01', true, 110) returning id")
+await db.query("select ensure_month('2026-08-01')")
+const cl = await q("select reimbursement::float as r, reimbursed from month_entries where recurring_id = $1 and month = '2026-08-01'", [claude])
+ok(cl.length === 1 && cl[0].r === 110 && cl[0].reimbursed === false, 'mês novo herda o reembolso esperado, ainda não recebido')
+await db.query("update recurring_expenses set reimbursement = 55 where id = $1", [claude])
+await db.query("select apply_recurring_change($1, '2026-08-01')", [claude])
+const cl2 = await q("select reimbursement::float as r from month_entries where recurring_id = $1 and month = '2026-08-01'", [claude])
+ok(cl2[0].r === 55, 'mudar o reembolso no modelo propaga para os meses seguintes')
+await db.query("update month_entries set reimbursed = true where recurring_id = $1 and month = '2026-08-01'", [claude])
+ok((await q("select 1 from month_entries where reimbursed")).length === 1, 'reembolso pode ser marcado como recebido')
+await throws(() => db.query("insert into month_entries (month, name, category, amount, due_day, reimbursement) values ('2026-08-01','X','outros',10,1,-5)"), 'reembolso não pode ser negativo')
+
 // --- metas
 await db.query("insert into goals (name, kind, target_amount, target_date) values ('Viagem','trip',9000,'2027-06-01')")
 const goals = await q('select count(*)::int as n from goals')
@@ -145,6 +158,9 @@ await db.query("update goals set my_share = 0.5")
 await db.query("insert into month_incomes (month, description, amount) values ('2026-05-01', 'Pix da Niva', 300)")
 await throws(() => db.query("insert into month_incomes (month, description, amount) values ('2026-05-15', 'Dia 15', 10)"), 'renda extra exige mês no dia 1')
 await throws(() => db.query("insert into month_incomes (month, description, amount) values ('2026-05-01', 'Zero', 0)"), 'renda extra precisa ser positiva')
+
+await db.query("insert into goal_items (goal_id, name, payment, amount, reimbursement) values ($1, 'Passagem', 'cash', 5000, 3500)", [goalA])
+await throws(() => db.query("insert into goal_items (goal_id, name, payment, amount, reimbursement) values ($1, 'Reembolso demais', 'cash', 100, 150)", [goalA]), 'reembolso do item não passa do valor')
 
 // --- isolamento entre usuários
 await as('authenticated', B)

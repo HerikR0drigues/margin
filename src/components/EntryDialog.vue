@@ -24,6 +24,7 @@ const category = ref('contas')
 const amount = ref('')
 const dueDay = ref('10')
 const onCard = ref(false)
+const reimbursement = ref('')
 const error = ref('')
 const saving = ref(false)
 
@@ -54,6 +55,7 @@ watch(open, (isOpen) => {
     amount.value = num2(props.entry.amount)
     dueDay.value = String(props.entry.due_day)
     onCard.value = props.entry.on_card
+    reimbursement.value = props.entry.reimbursement ? num2(props.entry.reimbursement) : ''
   } else {
     mode.value = 'fixed'
     name.value = ''
@@ -61,6 +63,7 @@ watch(open, (isOpen) => {
     amount.value = ''
     dueDay.value = '10'
     onCard.value = false
+    reimbursement.value = ''
   }
 })
 
@@ -71,7 +74,10 @@ async function submit() {
   if (!name.value.trim()) return void (error.value = 'Dê um nome ao gasto.')
   if (!Number.isFinite(value) || value < 0) return void (error.value = 'Informe um valor válido.')
   if (!(day >= 1 && day <= 31)) return void (error.value = 'O dia de vencimento vai de 1 a 31.')
-  const base = { name: name.value.trim(), category: category.value, amount: Math.round(value * 100) / 100, due_day: day, on_card: onCard.value }
+  const reimb = reimbursement.value.trim() ? parseMoney(reimbursement.value) : 0
+  if (!Number.isFinite(reimb) || reimb < 0) return void (error.value = 'O reembolso é inválido.')
+  if (reimb > value) return void (error.value = 'O reembolso não pode ser maior que o valor do gasto.')
+  const base = { name: name.value.trim(), category: category.value, amount: Math.round(value * 100) / 100, due_day: day, on_card: onCard.value, reimbursement: Math.round(reimb * 100) / 100 }
   saving.value = true
   try {
     if (props.entry) await month.updateEntry(props.entry, base)
@@ -113,6 +119,11 @@ async function submit() {
           <span class="block text-xs font-normal text-muted-foreground">Continua contando como gasto. Se já lança a fatura inteira como gasto, não repita aqui.</span>
         </Label>
         <Switch id="e-card" v-model="onCard" />
+      </div>
+      <div class="grid gap-1.5">
+        <Label for="e-reimb">Reembolso esperado (opcional)</Label>
+        <MoneyInput id="e-reimb" v-model="reimbursement" />
+        <p class="text-xs text-muted-foreground">Quanto vão devolver a você por este gasto. O custo no mês é o valor menos o reembolso.</p>
       </div>
       <div class="grid gap-1.5">
         <Label for="e-cat">Categoria</Label>

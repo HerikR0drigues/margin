@@ -307,6 +307,11 @@ function askRemove(e: MonthEntry) {
               <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.pendingTotal) }}</dd>
             </div>
           </dl>
+          <p v-if="month.reimbPending > 0 || month.reimbReceived > 0" class="mt-3 flex items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
+            Reembolsos:
+            <span class="font-medium text-foreground tabular-nums">{{ brl(month.reimbPending) }}</span> a receber
+            <span v-if="month.reimbReceived > 0">· {{ brl(month.reimbReceived) }} recebidos</span>
+          </p>
           <p v-if="month.cardCount > 0" class="mt-3 flex items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
             <CreditCard class="size-3.5" />
             No cartão: <span class="font-medium text-foreground tabular-nums">{{ brl(month.cardTotal) }}</span>
@@ -428,6 +433,16 @@ function askRemove(e: MonthEntry) {
               @click="startAmount(e)"
             >
               <span v-if="e.is_estimate">~</span>{{ brl(e.amount) }}
+            </button>
+            <button
+              v-if="e.reimbursement > 0 && editingAmount !== e.id"
+              type="button"
+              class="mt-0.5 block w-full text-right text-xs tabular-nums hover:underline"
+              :class="e.reimbursed ? 'text-good' : 'text-primary-text'"
+              :title="e.reimbursed ? 'Reembolso recebido. Clique para voltar a pendente' : 'Clique quando o reembolso cair na conta'"
+              @click="month.toggleReimbursed(e)"
+            >
+              − {{ brl(Math.min(e.reimbursement, e.amount)) }} reembolso · {{ e.reimbursed ? 'recebido' : 'a receber' }}
             </button>
           </div>
           <div class="flex items-center">
