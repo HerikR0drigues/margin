@@ -23,6 +23,7 @@ export interface MonthEntry {
   paid: boolean
   is_estimate: boolean
   skipped: boolean
+  on_card: boolean
 }
 
 export interface Recurring {
@@ -34,6 +35,7 @@ export interface Recurring {
   due_day: number
   start_month: string
   end_month: string | null
+  on_card: boolean
 }
 
 export interface Goal {

@@ -110,6 +110,20 @@ const cartaoRows = await q("select month::text as m from month_entries where rec
 const cartaoRec = await q("select end_month::text as e from recurring_expenses where id = $1", [cartao])
 ok(cartaoRows.length === 2 && cartaoRec[0].e === '2026-06-01', 'encerrar remove meses futuros e fecha o modelo em junho')
 
+// --- cartão de crédito: o marcador passa do modelo recorrente para os meses
+const [{ id: netflix }] = await q("insert into recurring_expenses (name, category, kind, amount, due_day, start_month, on_card) values ('Netflix','assinaturas','fixed',45,12,'2026-06-01', true) returning id")
+await db.query("select ensure_month('2026-07-01')")
+const nfx = await q("select on_card from month_entries where recurring_id = $1 and month = '2026-07-01'", [netflix])
+ok(nfx.length === 1 && nfx[0].on_card === true, 'mês novo herda o marcador de cartão da recorrente')
+const aluguelCard = await q("select on_card from month_entries where recurring_id = $1 limit 1", [aluguel])
+ok(aluguelCard[0].on_card === false, 'recorrente sem marcador continua fora do cartão')
+await db.query("update recurring_expenses set on_card = false where id = $1", [netflix])
+await db.query("select apply_recurring_change($1, '2026-07-01')", [netflix])
+const nfx2 = await q("select on_card from month_entries where recurring_id = $1 and month = '2026-07-01'", [netflix])
+ok(nfx2[0].on_card === false, 'mudar o marcador no modelo propaga para os meses seguintes')
+await db.query("insert into month_entries (month, name, category, amount, due_day, on_card) values ('2026-07-01', 'Presente', 'outros', 80, 20, true)")
+ok((await q("select 1 from month_entries where on_card and name = 'Presente'")).length === 1, 'gasto avulso pode ser marcado como cartão')
+
 // --- metas
 await db.query("insert into goals (name, kind, target_amount, target_date) values ('Viagem','trip',9000,'2027-06-01')")
 const goals = await q('select count(*)::int as n from goals')

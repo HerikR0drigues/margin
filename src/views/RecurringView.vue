@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Pencil, Plus, Repeat, Square } from '@lucide/vue'
+import { CreditCard, Pencil, Plus, Repeat, Square } from '@lucide/vue'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
@@ -71,6 +71,7 @@ function askEnd(r: Recurring) {
               <span>{{ categoryById(r.category).name }}</span>
               <span>vence dia {{ r.due_day }}</span>
               <Badge :variant="r.kind === 'variable' ? 'primary' : 'outline'">{{ r.kind === 'variable' ? 'variável' : 'fixa' }}</Badge>
+              <Badge v-if="r.on_card" variant="outline"><CreditCard /> cartão</Badge>
               <span v-if="r.end_month">até {{ monthLabel(r.end_month) }}</span>
             </div>
           </div>

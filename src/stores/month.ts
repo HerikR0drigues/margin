@@ -24,6 +24,7 @@ export interface NewExpense {
   category: string
   amount: number
   due_day: number
+  on_card?: boolean
 }
 
 export const useMonth = defineStore('month', () => {
@@ -40,6 +41,8 @@ export const useMonth = defineStore('month', () => {
   const total = computed(() => visible.value.reduce((s, e) => s + e.amount, 0))
   const paidTotal = computed(() => visible.value.filter((e) => e.paid).reduce((s, e) => s + e.amount, 0))
   const pendingTotal = computed(() => total.value - paidTotal.value)
+  const cardTotal = computed(() => visible.value.filter((e) => e.on_card).reduce((s, e) => s + e.amount, 0))
+  const cardCount = computed(() => visible.value.filter((e) => e.on_card).length)
   const paidCount = computed(() => visible.value.filter((e) => e.paid).length)
   const estimateCount = computed(() => visible.value.filter((e) => e.is_estimate).length)
   const byCategory = computed(() => {
@@ -211,7 +214,7 @@ export const useMonth = defineStore('month', () => {
 
   return {
     key, salary, entries, incomes, trend, loading,
-    visible, total, paidTotal, pendingTotal, paidCount, estimateCount, byCategory, extraIncome, income, free, previousTotal,
+    visible, total, cardTotal, cardCount, paidTotal, pendingTotal, paidCount, estimateCount, byCategory, extraIncome, income, free, previousTotal,
     load, saveSalary, addIncome, removeIncome, addOneOff, addRecurring, updateEntry, togglePaid, removeEntry, restoreEntry,
   }
 })

@@ -13,6 +13,7 @@ export interface RecurringPatch {
   kind: ExpenseKind
   amount: number
   due_day: number
+  on_card: boolean
 }
 
 export const useRecurring = defineStore('recurring', () => {

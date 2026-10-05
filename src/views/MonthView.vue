@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
-  ArrowDown, ArrowUp, Check, ChevronLeft, ChevronRight, CircleAlert, CircleCheck,
+  ArrowDown, ArrowUp, Check, CreditCard, ChevronLeft, ChevronRight, CircleAlert, CircleCheck,
   Pencil, Plus, RotateCcw, SkipForward, Trash2, TriangleAlert,
 } from '@lucide/vue'
 import Badge from '@/components/ui/Badge.vue'
@@ -307,6 +307,11 @@ function askRemove(e: MonthEntry) {
               <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.pendingTotal) }}</dd>
             </div>
           </dl>
+          <p v-if="month.cardCount > 0" class="mt-3 flex items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
+            <CreditCard class="size-3.5" />
+            No cartão: <span class="font-medium text-foreground tabular-nums">{{ brl(month.cardTotal) }}</span>
+            em {{ month.cardCount }} {{ month.cardCount === 1 ? 'gasto' : 'gastos' }}
+          </p>
         </Card>
       </div>
     </div>
@@ -394,6 +399,7 @@ function askRemove(e: MonthEntry) {
               <span>vence dia {{ e.due_day }}</span>
               <Badge v-if="e.recurring_id" variant="outline">recorrente</Badge>
               <Badge v-else>avulso</Badge>
+              <Badge v-if="e.on_card" variant="outline"><CreditCard /> cartão</Badge>
               <Badge v-if="e.is_estimate" variant="primary">estimado</Badge>
               <Badge v-if="isLate(e)" variant="warn"><TriangleAlert class="text-serious" /> atrasado</Badge>
               <span v-if="e.paid">pago</span>
