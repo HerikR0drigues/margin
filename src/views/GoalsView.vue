@@ -5,6 +5,7 @@ import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
 import Slider from '@/components/ui/Slider.vue'
 import GoalDialog from '@/components/GoalDialog.vue'
 import GoalItemDialog from '@/components/GoalItemDialog.vue'
@@ -324,13 +325,34 @@ function askRemove(g: Goal) {
       </Card>
     </div>
 
-    <Card v-if="!goals.goals.length" class="flex flex-col items-center gap-3 py-14 text-center">
+    <div v-if="!goals.goals.length && goals.loading" class="grid gap-4" role="status" aria-busy="true" aria-label="Carregando objetivos">
+      <Card class="p-5">
+        <Skeleton class="h-4 w-48" />
+        <Skeleton class="mt-3 h-9 w-52" />
+        <Skeleton class="mt-4 h-2 w-full rounded-full" />
+        <div class="mt-4 grid grid-cols-3 gap-4">
+          <div v-for="i in 3" :key="i" class="grid gap-2"><Skeleton class="h-3 w-20" /><Skeleton class="h-5 w-24" /></div>
+        </div>
+      </Card>
+      <div class="grid gap-4 lg:grid-cols-2">
+        <Card v-for="i in 2" :key="i" class="grid content-start gap-4">
+          <div class="flex items-center gap-3">
+            <Skeleton class="size-9 rounded-lg" />
+            <div class="grid gap-2"><Skeleton class="h-4 w-32" /><Skeleton class="h-3 w-52" /></div>
+          </div>
+          <Skeleton class="h-1.5 w-full rounded-full" />
+          <div class="grid grid-cols-2 gap-4">
+            <div class="grid gap-2"><Skeleton class="h-3 w-24" /><Skeleton class="h-6 w-28" /></div>
+            <div class="grid gap-2"><Skeleton class="h-3 w-24" /><Skeleton class="h-6 w-20" /></div>
+          </div>
+          <Skeleton class="h-24 w-full" />
+        </Card>
+      </div>
+    </div>
+    <Card v-else-if="!goals.goals.length" class="flex flex-col items-center gap-3 py-14 text-center">
       <Target class="size-7 text-muted-foreground" />
-      <p class="max-w-sm text-sm text-muted-foreground">
-        <template v-if="goals.loading">Carregando…</template>
-        <template v-else>Cadastre uma viagem, um carro ou uma reserva e veja quanto precisa guardar por mês.</template>
-      </p>
-      <Button v-if="!goals.loading" @click="openNew"><Plus /> Criar o primeiro objetivo</Button>
+      <p class="max-w-sm text-sm text-muted-foreground">Cadastre uma viagem, um carro ou uma reserva e veja quanto precisa guardar por mês.</p>
+      <Button @click="openNew"><Plus /> Criar o primeiro objetivo</Button>
     </Card>
 
     <GoalDialog v-model:open="dialogOpen" :goal="editing" />

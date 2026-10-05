@@ -11,6 +11,7 @@ import Input from '@/components/ui/Input.vue'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
 import Segmented from '@/components/ui/Segmented.vue'
 import EntryDialog from '@/components/EntryDialog.vue'
+import MonthSkeleton from '@/components/MonthSkeleton.vue'
 import DonutChart from '@/components/charts/DonutChart.vue'
 import TrendChart from '@/components/charts/TrendChart.vue'
 import { CATEGORIES, categoryById } from '@/lib/categories'
@@ -194,56 +195,91 @@ function askRemove(e: MonthEntry) {
       <Button @click="openNew"><Plus /> Novo gasto</Button>
     </div>
 
+    <MonthSkeleton v-if="month.loading" />
+    <template v-else>
     <!-- resumo -->
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-      <Card class="p-5 sm:p-6">
-        <div class="flex items-center justify-between gap-2">
-          <h2 class="text-sm font-medium text-muted-foreground">
-            {{ heroParts.neg ? 'Faltam em' : 'Sobra em' }} {{ monthName(month.key) }}
-          </h2>
-          <span v-if="month.income > 0" class="inline-flex items-center gap-1.5 text-[13px] font-medium">
-            <component :is="sevIcon[sev.key]" class="size-4" :class="sevText[sev.key]" />
-            {{ sev.label }}
-          </span>
-        </div>
-        <div class="mt-3 flex items-baseline font-display tracking-tight" aria-live="polite">
-          <span class="mr-1.5 text-lg text-muted-foreground">{{ heroParts.neg ? '−R$' : 'R$' }}</span>
-          <span class="text-5xl font-semibold leading-none sm:text-6xl">{{ heroParts.int }}</span>
-          <span class="text-2xl text-muted-foreground">,{{ heroParts.dec }}</span>
-        </div>
-        <p class="mt-2 max-w-[52ch] text-sm text-muted-foreground">{{ note }}</p>
-        <div
-          class="mt-4 h-2 overflow-hidden rounded-full bg-secondary"
-          role="img"
-          :aria-label="month.income > 0 ? `${sev.label}: ${Math.round(ratio * 100)}% do salário comprometido` : 'Salário não informado'"
-        >
-          <div class="h-full rounded-full transition-[width] duration-500" :class="sevBar[sev.key]" :style="{ width: Math.min(ratio, 1) * 100 + '%' }" />
-        </div>
-        <dl class="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 border-t pt-4 sm:grid-cols-4">
-          <div>
-            <dt class="text-xs text-muted-foreground">Salário</dt>
-            <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.salary) }}</dd>
-            <dd v-if="month.extraIncome > 0" class="mt-0.5 text-xs text-brand-300">+ {{ brl(month.extraIncome) }} extras</dd>
+      <div class="grid content-start gap-4">
+        <Card class="p-5 sm:p-6">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-medium text-muted-foreground">
+              {{ heroParts.neg ? 'Faltam em' : 'Sobra em' }} {{ monthName(month.key) }}
+            </h2>
+            <span v-if="month.income > 0" class="inline-flex items-center gap-1.5 text-[13px] font-medium">
+              <component :is="sevIcon[sev.key]" class="size-4" :class="sevText[sev.key]" />
+              {{ sev.label }}
+            </span>
           </div>
-          <div>
-            <dt class="text-xs text-muted-foreground">Gastos fixos</dt>
-            <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.total) }}</dd>
-            <dd v-if="delta != null && Math.abs(delta) >= 0.005" class="mt-0.5 flex items-center gap-1 text-xs" :class="delta > 0 ? 'text-serious' : 'text-good'">
-              <component :is="delta > 0 ? ArrowUp : ArrowDown" class="size-3" />
-              {{ brl0(Math.abs(delta)) }} vs mês anterior
-            </dd>
+          <div class="mt-3 flex items-baseline font-display tracking-tight" aria-live="polite">
+            <span class="mr-1.5 text-lg text-muted-foreground">{{ heroParts.neg ? '−R$' : 'R$' }}</span>
+            <span class="text-5xl font-semibold leading-none sm:text-6xl">{{ heroParts.int }}</span>
+            <span class="text-2xl text-muted-foreground">,{{ heroParts.dec }}</span>
           </div>
-          <div>
-            <dt class="text-xs text-muted-foreground">Metas por mês</dt>
-            <dd class="mt-0.5 font-medium tabular-nums">{{ brl(impact.committed) }}</dd>
+          <p class="mt-2 max-w-[52ch] text-sm text-muted-foreground">{{ note }}</p>
+          <div
+            class="mt-4 h-2 overflow-hidden rounded-full bg-secondary"
+            role="img"
+            :aria-label="month.income > 0 ? `${sev.label}: ${Math.round(ratio * 100)}% do salário comprometido` : 'Salário não informado'"
+          >
+            <div class="h-full rounded-full transition-[width] duration-500" :class="sevBar[sev.key]" :style="{ width: Math.min(ratio, 1) * 100 + '%' }" />
           </div>
-          <div>
-            <dt class="text-xs text-muted-foreground">Depois das metas</dt>
-            <dd class="mt-0.5 font-medium tabular-nums" :class="impact.leftover < 0 ? 'text-destructive' : ''">{{ brl(impact.leftover) }}</dd>
-          </div>
-        </dl>
-      </Card>
+          <dl class="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 border-t pt-4 sm:grid-cols-4">
+            <div>
+              <dt class="text-xs text-muted-foreground">Salário</dt>
+              <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.salary) }}</dd>
+              <dd v-if="month.extraIncome > 0" class="mt-0.5 text-xs text-brand-300">+ {{ brl(month.extraIncome) }} extras</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-foreground">Gastos fixos</dt>
+              <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.total) }}</dd>
+              <dd v-if="delta != null && Math.abs(delta) >= 0.005" class="mt-0.5 flex items-center gap-1 text-xs" :class="delta > 0 ? 'text-serious' : 'text-good'">
+                <component :is="delta > 0 ? ArrowUp : ArrowDown" class="size-3" />
+                {{ brl0(Math.abs(delta)) }} vs mês anterior
+              </dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-foreground">Metas por mês</dt>
+              <dd class="mt-0.5 font-medium tabular-nums">{{ brl(impact.committed) }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-foreground">Depois das metas</dt>
+              <dd class="mt-0.5 font-medium tabular-nums" :class="impact.leftover < 0 ? 'text-destructive' : ''">{{ brl(impact.leftover) }}</dd>
+            </div>
+          </dl>
+        </Card>
 
+          <Card>
+            <div class="flex items-center justify-between gap-2">
+              <h2 class="text-sm font-medium">Pagamentos</h2>
+              <span class="text-xs text-muted-foreground">
+                {{ month.topEntries.length ? `${month.paidCount} de ${month.topEntries.length} pagos` : 'Nenhum gasto' }}
+              </span>
+            </div>
+            <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary">
+              <div class="h-full rounded-full bg-brand-500 transition-[width] duration-500" :style="{ width: (month.total ? (month.paidTotal / month.total) * 100 : 0) + '%' }" />
+            </div>
+            <dl class="mt-3 grid grid-cols-2 gap-3">
+              <div>
+                <dt class="text-xs text-muted-foreground">Já pago</dt>
+                <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.paidTotal) }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-muted-foreground">A pagar</dt>
+                <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.pendingTotal) }}</dd>
+              </div>
+            </dl>
+            <p v-if="month.reimbPending > 0 || month.reimbReceived > 0" class="mt-3 flex items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
+              Reembolsos:
+              <span class="font-medium text-foreground tabular-nums">{{ brl(month.reimbPending) }}</span> a receber
+              <span v-if="month.reimbReceived > 0">· {{ brl(month.reimbReceived) }} recebidos</span>
+            </p>
+            <p v-if="month.cardCount > 0" class="mt-3 flex items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
+              <CreditCard class="size-3.5" />
+              No cartão: <span class="font-medium text-foreground tabular-nums">{{ brl(month.cardTotal) }}</span>
+              em {{ month.cardCount }} {{ month.cardCount === 1 ? 'gasto' : 'gastos' }}
+            </p>
+          </Card>
+      </div>
       <div class="grid content-start gap-4">
         <Card>
           <label for="salary" class="text-xs font-medium text-muted-foreground">Salário de {{ monthName(month.key) }}</label>
@@ -288,42 +324,18 @@ function askRemove(e: MonthEntry) {
             <Button type="submit" variant="outline" size="sm" class="justify-self-start"><Plus /> Adicionar</Button>
           </form>
         </Card>
-        <Card>
-          <div class="flex items-center justify-between gap-2">
-            <h2 class="text-sm font-medium">Pagamentos</h2>
-            <span class="text-xs text-muted-foreground">
-              {{ month.topEntries.length ? `${month.paidCount} de ${month.topEntries.length} pagos` : 'Nenhum gasto' }}
-            </span>
-          </div>
-          <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary">
-            <div class="h-full rounded-full bg-brand-500 transition-[width] duration-500" :style="{ width: (month.total ? (month.paidTotal / month.total) * 100 : 0) + '%' }" />
-          </div>
-          <dl class="mt-3 grid grid-cols-2 gap-3">
-            <div>
-              <dt class="text-xs text-muted-foreground">Já pago</dt>
-              <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.paidTotal) }}</dd>
-            </div>
-            <div>
-              <dt class="text-xs text-muted-foreground">A pagar</dt>
-              <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.pendingTotal) }}</dd>
-            </div>
-          </dl>
-          <p v-if="month.reimbPending > 0 || month.reimbReceived > 0" class="mt-3 flex items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
-            Reembolsos:
-            <span class="font-medium text-foreground tabular-nums">{{ brl(month.reimbPending) }}</span> a receber
-            <span v-if="month.reimbReceived > 0">· {{ brl(month.reimbReceived) }} recebidos</span>
-          </p>
-          <p v-if="month.cardCount > 0" class="mt-3 flex items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
-            <CreditCard class="size-3.5" />
-            No cartão: <span class="font-medium text-foreground tabular-nums">{{ brl(month.cardTotal) }}</span>
-            em {{ month.cardCount }} {{ month.cardCount === 1 ? 'gasto' : 'gastos' }}
-          </p>
-        </Card>
       </div>
     </div>
 
     <!-- gráficos -->
-    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
+    <div class="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+      <Card>
+        <div class="mb-3 flex flex-wrap items-baseline justify-between gap-x-3">
+          <h2 class="text-sm font-medium">Mês a mês</h2>
+          <span class="text-xs text-muted-foreground">Clique numa coluna para abrir o mês</span>
+        </div>
+        <TrendChart :months="month.trend" :selected="month.key" @select="(k) => month.load(k)" />
+      </Card>
       <Card>
         <h2 class="mb-4 text-sm font-medium">Gastos por categoria</h2>
         <template v-if="slices.length">
@@ -363,13 +375,6 @@ function askRemove(e: MonthEntry) {
         <p v-else class="py-10 text-center text-sm text-muted-foreground">Sem gastos neste mês.</p>
       </Card>
 
-      <Card>
-        <div class="mb-3 flex flex-wrap items-baseline justify-between gap-x-3">
-          <h2 class="text-sm font-medium">Mês a mês</h2>
-          <span class="text-xs text-muted-foreground">Clique numa coluna para abrir o mês</span>
-        </div>
-        <TrendChart :months="month.trend" :selected="month.key" @select="(k) => month.load(k)" />
-      </Card>
     </div>
 
     <!-- lista -->
@@ -539,6 +544,7 @@ function askRemove(e: MonthEntry) {
         </button>
       </div>
     </Card>
+    </template>
 
     <EntryDialog v-model:open="dialogOpen" :entry="editingEntry" />
   </div>

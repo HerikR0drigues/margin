@@ -4,6 +4,7 @@ import { Plus } from '@lucide/vue'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
 import Dialog from '@/components/ui/Dialog.vue'
 import Input from '@/components/ui/Input.vue'
 import Label from '@/components/ui/Label.vue'
@@ -98,7 +99,10 @@ async function approve(i: number) {
           </div>
         </li>
       </ul>
-      <p v-if="!pending.length" class="px-5 py-10 text-center text-sm text-muted-foreground">Nenhum pedido pendente.</p>
+      <div v-if="!pending.length && admin.loading" class="grid gap-3 px-5 py-4" role="status" aria-busy="true" aria-label="Carregando pedidos">
+        <Skeleton v-for="i in 2" :key="i" class="h-10 w-full" />
+      </div>
+      <p v-else-if="!pending.length" class="px-5 py-10 text-center text-sm text-muted-foreground">Nenhum pedido pendente.</p>
       <div v-if="decided.length" class="border-t px-4 py-3 text-xs text-muted-foreground sm:px-5">
         Já decididos: {{ decided.map((r) => `${r.name} (${r.status === 'approved' ? 'aprovado' : 'recusado'})`).join(', ') }}
       </div>
@@ -119,7 +123,10 @@ async function approve(i: number) {
           </div>
         </li>
       </ul>
-      <p v-if="!admin.invites.length" class="px-5 py-10 text-center text-sm text-muted-foreground">Nenhum convite gerado.</p>
+      <div v-if="!admin.invites.length && admin.loading" class="grid gap-3 px-5 py-4" role="status" aria-busy="true" aria-label="Carregando convites">
+        <Skeleton v-for="i in 2" :key="i" class="h-10 w-full" />
+      </div>
+      <p v-else-if="!admin.invites.length" class="px-5 py-10 text-center text-sm text-muted-foreground">Nenhum convite gerado.</p>
     </Card>
 
     <Card v-else class="p-0 sm:p-0">

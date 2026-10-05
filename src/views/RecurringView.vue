@@ -4,6 +4,7 @@ import { CreditCard, Pencil, Plus, Repeat, Square } from '@lucide/vue'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
 import EntryDialog from '@/components/EntryDialog.vue'
 import RecurringDialog from '@/components/RecurringDialog.vue'
 import { categoryById } from '@/lib/categories'
@@ -95,10 +96,16 @@ function askEnd(r: Recurring) {
           </div>
         </li>
       </ul>
-      <div v-if="!active.length" class="flex flex-col items-center gap-2 px-5 py-12 text-center text-sm text-muted-foreground">
+      <div v-if="!active.length && store.loading" role="status" aria-busy="true" aria-label="Carregando recorrentes">
+        <div v-for="i in 4" :key="i" class="flex items-center gap-3 px-4 py-3 sm:px-5" :class="i > 1 ? 'border-t' : ''">
+          <div class="grid min-w-0 flex-1 gap-2"><Skeleton class="h-4 w-36" /><Skeleton class="h-3 w-60 max-w-full" /></div>
+          <Skeleton class="h-5 w-20" />
+          <Skeleton class="h-7 w-16" />
+        </div>
+      </div>
+      <div v-else-if="!active.length" class="flex flex-col items-center gap-2 px-5 py-12 text-center text-sm text-muted-foreground">
         <Repeat class="size-6" />
-        <span v-if="store.loading">Carregando…</span>
-        <span v-else>Nenhuma recorrente ainda. Cadastre internet, aluguel, assinaturas e o cartão.</span>
+        <span>Nenhuma recorrente ainda. Cadastre internet, aluguel, assinaturas e o cartão.</span>
       </div>
     </Card>
 
