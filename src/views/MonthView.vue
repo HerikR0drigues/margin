@@ -80,7 +80,7 @@ const note = computed(() => {
   if (month.income <= 0) return 'Informe o salário do mês para ver quanto sobra.'
   if (!month.visible.length) return 'Nenhum gasto neste mês ainda.'
   const big = biggest.value
-  return `${Math.round(ratio.value * 100)}% do salário vai para gastos fixos.${big ? ` O maior peso é ${categoryById(big.id).name} (${brl0(big.value)}).` : ''}`
+  return `${Math.round(ratio.value * 100)}% da renda do mês (salário + extras) vai para gastos.${big ? ` O maior peso é ${categoryById(big.id).name} (${brl0(big.value)}).` : ''}`
 })
 const delta = computed(() => (month.previousTotal == null ? null : month.total - month.previousTotal))
 
@@ -263,7 +263,7 @@ function askRemove(e: MonthEntry) {
               <dd v-if="month.extraIncome > 0" class="mt-0.5 text-xs text-brand-300">+ {{ brl(month.extraIncome) }} extras</dd>
             </div>
             <div>
-              <dt class="text-xs text-muted-foreground">Gastos fixos</dt>
+              <dt class="text-xs text-muted-foreground">Gastos do mês</dt>
               <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.total) }}</dd>
               <dd v-if="delta != null && Math.abs(delta) >= 0.005" class="mt-0.5 flex items-center gap-1 text-xs" :class="delta > 0 ? 'text-serious' : 'text-good'">
                 <component :is="delta > 0 ? ArrowUp : ArrowDown" class="size-3" />
