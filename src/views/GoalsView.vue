@@ -363,6 +363,6 @@ function askRemove(g: Goal) {
     </Card>
 
     <GoalDialog v-model:open="dialogOpen" :goal="editing" />
-    <GoalItemDialog v-model:open="itemOpen" :goal-id="itemGoalId" :item="editingItem" />
+    <GoalItemDialog v-model:open="itemOpen" :goal-id="itemGoalId" :item="editingItem" :share="goals.goals.find((g) => g.id === itemGoalId)?.my_share" />
   </div>
 </template>

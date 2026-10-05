@@ -11,7 +11,7 @@ import { addMonths, brl, currentMonthKey, fromMonthInput, num2, parseMoney, toMo
 import type { GoalItem, ItemPayment } from '@/lib/types'
 import { useGoals, type GoalItemInput } from '@/stores/goals'
 
-const props = defineProps<{ goalId: string; item: GoalItem | null }>()
+const props = defineProps<{ goalId: string; item: GoalItem | null; share?: number }>()
 const open = defineModel<boolean>('open', { default: false })
 const store = useGoals()
 
@@ -238,6 +238,9 @@ const round = (v: number) => Math.round(v * 100) / 100
         <Label for="i-has-reimb" class="cursor-pointer">
           Tem reembolso
           <span class="block text-xs font-normal text-muted-foreground">Ao ligar, já sugere 50% do valor. Você pode editar.</span>
+          <span v-if="(share ?? 1) < 1" class="mt-1 block text-xs font-normal text-primary-text">
+            Este objetivo já é dividido ({{ Math.round((share ?? 1) * 100) }}% seu). Use reembolso só para dinheiro que vem de fora, como a empresa. Não use para a parte da outra pessoa: ela já está descontada.
+          </span>
         </Label>
         <Switch id="i-has-reimb" v-model="hasReimb" />
       </div>
