@@ -145,6 +145,13 @@ ok(ft.length === 1 && ft[0].card_bill === true && ft[0].on_card === false, 'mês
 await throws(() => db.query("update month_entries set on_card = true where recurring_id = $1", [fatura]), 'um gasto não é fatura e está no cartão ao mesmo tempo')
 await throws(() => db.query("insert into recurring_expenses (name, category, kind, amount, due_day, start_month, on_card, card_bill) values ('X','outros','fixed',1,1,'2026-06-01', true, true)"), 'modelo recorrente também não pode ser as duas coisas')
 
+// --- investimentos: valor planejado copia o do mês anterior; "aportei" não
+await db.query("update month_settings set invest = 800, invest_done = true where month = '2026-09-01'")
+await db.query("select ensure_month('2026-10-01')")
+const invest = await q("select invest::float as i, invest_done as d from month_settings where month = '2026-10-01'")
+ok(invest.length === 1 && invest[0].i === 800 && invest[0].d === false, 'mês novo copia o investimento planejado, mas não o "já aportei"')
+await throws(() => db.query("update month_settings set invest = -1 where month = '2026-05-01'"), 'investimento não pode ser negativo')
+
 // --- metas
 await db.query("insert into goals (name, kind, target_amount, target_date) values ('Viagem','trip',9000,'2027-06-01')")
 const goals = await q('select count(*)::int as n from goals')

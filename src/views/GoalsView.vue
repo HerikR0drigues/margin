@@ -138,7 +138,7 @@ function askRemove(g: Goal) {
 </script>
 
 <template>
-  <div class="grid gap-4">
+  <div class="grid grid-cols-[minmax(0,1fr)] gap-4">
     <div class="flex flex-wrap items-end justify-between gap-3">
       <div>
         <h1 class="text-xl font-semibold tracking-tight sm:text-2xl">Planejamento</h1>
@@ -269,7 +269,14 @@ function askRemove(g: Goal) {
               </div>
             </li>
           </ul>
-          <p v-else class="border-t px-3 py-3 text-xs text-muted-foreground">
+          <div v-if="c.items.length && c.totals.undetailed > 0" class="flex items-center justify-between gap-3 border-t px-3 py-2.5">
+            <div class="min-w-0">
+              <div class="text-sm font-medium">A detalhar</div>
+              <div class="text-xs text-muted-foreground">Estimativa do que ainda não virou item. Entra como valor a guardar.</div>
+            </div>
+            <div class="text-right text-sm font-medium tabular-nums">{{ brl(c.totals.undetailed) }}</div>
+          </div>
+          <p v-else-if="!c.items.length" class="border-t px-3 py-3 text-xs text-muted-foreground">
             Sem itens: o app usa o valor total do objetivo. Adicione passagens, hotel e o que mais entrar, cada um com sua forma de pagamento.
           </p>
           <dl v-if="c.items.length" class="grid grid-cols-3 gap-3 border-t px-3 py-2.5 text-xs">

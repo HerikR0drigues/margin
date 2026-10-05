@@ -18,6 +18,8 @@ App de gastos mensais, micro SaaS **só por convite**. Dono/admin: o próprio us
 - Objetivo com itens: `goal_items` (`payment` = `cash` | `installments`, entrada, parcelas, o que já foi pago). `goals.my_share` = parte do usuário (0.5 = dividido com a noiva). `src/lib/goal-items.ts` calcula custo, juros e parcelas do mês; `effectiveGoal` entrega ao planejador só a parte do usuário (à vista + entradas) e as parcelas do mês entram no peso das metas. Testes em `goal-items.test.ts`.
 - Cartão e reembolso: `on_card` marca gasto pago no cartão (continua contando; o total no cartão é o valor cheio da fatura). `reimbursement` (por gasto/recorrente/item de objetivo) é o que devolvem ao usuário: o custo do gasto é `amount − reimbursement` (`netOf` em `stores/month.ts`) e o mês mostra reembolsos a receber/recebidos (`reimbursed`). Em objetivos o reembolso é do usuário e abate **depois** de dividir (`my_share`); em itens parcelados só reduz o custo total, não a entrada.
 - Fatura do cartão: `card_bill` marca o lançamento que é a fatura (valor cheio); gastos `on_card` ficam **dentro** dela e não somam de novo (se não há fatura no mês, `on_card` é só marcador). Detalhado > fatura: vale a soma. O que sobra sem detalhe entra na categoria da fatura. Regra em `src/lib/card-bill.ts` (`monthBuckets`, testada) e usada pelo mês e pelo gráfico mês a mês. Itens parcelados de objetivo com `in_card_bill` aparecem dentro da fatura e não pesam de novo nas metas quando o mês tem fatura.
+- Investimentos: `month_settings.invest` (valor planejado, copia o do mês anterior como o salário) e `invest_done` ("já aportei"). Não é gasto: aparece no cartão Investimentos como "livre depois de investir" = sobra depois das metas − investimento.
+- Objetivo com itens e valor total maior que a soma dos itens: a diferença é "a detalhar" (estimativa à vista) e entra como valor a guardar (`undetailedOf` em `goal-items.ts`).
 - `goals` + `goal_contributions`; matemática em `src/lib/planner.ts` (anuidade com rendimento, financiamento pela tabela Price, impacto = sobra − soma dos aportes). Testes em `planner.test.ts`.
 
 ## Acesso
@@ -30,8 +32,12 @@ App de gastos mensais, micro SaaS **só por convite**. Dono/admin: o próprio us
 Antes de dar algo por pronto: build + testes + abrir a tela no navegador.
 
 ## Estado
-Pronto: schema/RLS/funções (54 checagens SQL), planejador, itens e fatura (36 testes), todas as telas, Docker.
+Pronto: schema/RLS/funções (56 checagens SQL), planejador, itens e fatura (39 testes), todas as telas, Docker.
 Já roda contra o Supabase **na nuvem** (projeto Margin, migrations aplicadas com `npx supabase db push`, função `accept-invite` publicada). **Ainda não validado**: Docker (o dono não tem Docker instalado) e o fluxo de convite de ponta a ponta.
 
 ## Ideias a seguir
 Tema claro (hoje só dark), exportar CSV, categorias personalizadas, gráficos por categoria ao longo dos meses, PWA, e-mail automático nos convites.
+
+## Armadilhas
+- O Windows do dono tem "reduzir animações" ligado: `style.css` zera animações no `prefers-reduced-motion`, exceto `.skeleton` (varredura suave de propósito).
+- Grids de página usam `grid-cols-[minmax(0,1fr)]` para a coluna nunca passar do container (senão as linhas ficam com larguras diferentes).

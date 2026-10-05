@@ -9,7 +9,9 @@ import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 import Input from '@/components/ui/Input.vue'
 import MoneyInput from '@/components/ui/MoneyInput.vue'
+import Label from '@/components/ui/Label.vue'
 import Segmented from '@/components/ui/Segmented.vue'
+import Switch from '@/components/ui/Switch.vue'
 import EntryDialog from '@/components/EntryDialog.vue'
 import MonthSkeleton from '@/components/MonthSkeleton.vue'
 import DonutChart from '@/components/charts/DonutChart.vue'
@@ -90,6 +92,37 @@ const impact = computed(() =>
     plans.value.map((p, i) => p.monthly + goals.totals(goals.goals[i]!, month.key, month.hasBill).myInstallmentsNow),
   ),
 )
+
+/* ---------- investimentos ---------- */
+const investText = ref('')
+watch(
+  () => [month.key, month.invest] as const,
+  () => {
+    if (document.activeElement?.id !== 'invest') investText.value = month.invest ? num2(month.invest) : ''
+  },
+  { immediate: true },
+)
+let investTimer: ReturnType<typeof setTimeout> | undefined
+function onInvestInput(v: string) {
+  investText.value = v
+  const n = parseMoney(v)
+  const value = Number.isFinite(n) && n >= 0 ? n : 0
+  month.invest = value
+  clearTimeout(investTimer)
+  investTimer = setTimeout(() => void month.saveInvest(value), 600)
+}
+/** atalho: investir uma porcentagem do que sobra depois das metas */
+function setInvestPct(p: number) {
+  clearTimeout(investTimer)
+  const value = Math.round(Math.max(impact.value.leftover, 0) * p) / 100
+  investText.value = value ? num2(value) : ''
+  void month.saveInvest(value)
+}
+// `|| 0` protege contra valor ausente: nunca mostra NaN
+const invested = computed(() => Number(month.invest) || 0)
+const afterInvest = computed(() => impact.value.leftover - invested.value)
+const investPct = computed(() => (impact.value.leftover > 0 ? invested.value / impact.value.leftover : 0))
+onBeforeUnmount(() => clearTimeout(investTimer))
 
 /* ---------- rendas extras ---------- */
 const incomeName = ref('')
@@ -181,7 +214,7 @@ function askRemove(e: MonthEntry) {
 </script>
 
 <template>
-  <div class="grid gap-4">
+  <div class="grid grid-cols-[minmax(0,1fr)] gap-4">
     <!-- navegação do mês -->
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-1.5">
@@ -199,7 +232,7 @@ function askRemove(e: MonthEntry) {
     <template v-else>
     <!-- resumo -->
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-      <div class="grid content-start gap-4">
+      <div class="grid grid-rows-[auto_1fr] gap-4">
         <Card class="p-5 sm:p-6">
           <div class="flex items-center justify-between gap-2">
             <h2 class="text-sm font-medium text-muted-foreground">
@@ -248,7 +281,7 @@ function askRemove(e: MonthEntry) {
           </dl>
         </Card>
 
-          <Card>
+          <Card class="flex flex-col">
             <div class="flex items-center justify-between gap-2">
               <h2 class="text-sm font-medium">Pagamentos</h2>
               <span class="text-xs text-muted-foreground">
@@ -268,6 +301,7 @@ function askRemove(e: MonthEntry) {
                 <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.pendingTotal) }}</dd>
               </div>
             </dl>
+            <div class="mt-auto pt-3">
             <p v-if="month.reimbPending > 0 || month.reimbReceived > 0" class="mt-3 flex items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
               Reembolsos:
               <span class="font-medium text-foreground tabular-nums">{{ brl(month.reimbPending) }}</span> a receber
@@ -278,6 +312,7 @@ function askRemove(e: MonthEntry) {
               No cartão: <span class="font-medium text-foreground tabular-nums">{{ brl(month.cardTotal) }}</span>
               em {{ month.cardCount }} {{ month.cardCount === 1 ? 'gasto' : 'gastos' }}
             </p>
+            </div>
           </Card>
       </div>
       <div class="grid content-start gap-4">
@@ -323,6 +358,32 @@ function askRemove(e: MonthEntry) {
             <p v-if="incomeError" class="text-xs text-destructive" role="alert">{{ incomeError }}</p>
             <Button type="submit" variant="outline" size="sm" class="justify-self-start"><Plus /> Adicionar</Button>
           </form>
+        </Card>
+        <Card>
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-medium">Investimentos</h2>
+            <span v-if="invested > 0" class="text-xs tabular-nums text-muted-foreground">{{ Math.round(investPct * 100) }}% da sobra</span>
+          </div>
+          <MoneyInput id="invest" :model-value="investText" class="mt-3 h-11 text-lg font-semibold" aria-label="Quanto investir neste mês" @update:model-value="onInvestInput" />
+          <div class="mt-2 flex flex-wrap items-center gap-1.5">
+            <span class="text-xs text-muted-foreground">Da sobra:</span>
+            <Button v-for="p in [10, 20, 30, 50, 100]" :key="p" type="button" variant="outline" size="sm" @click="setInvestPct(p)">{{ p }}%</Button>
+          </div>
+          <dl class="mt-3 grid grid-cols-2 gap-3 border-t pt-3 text-sm">
+            <div>
+              <dt class="text-xs text-muted-foreground">Sobra depois das metas</dt>
+              <dd class="mt-0.5 font-medium tabular-nums">{{ brl(impact.leftover) }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-foreground">Livre depois de investir</dt>
+              <dd class="mt-0.5 font-medium tabular-nums" :class="afterInvest < 0 ? 'text-destructive' : ''">{{ brl(afterInvest) }}</dd>
+            </div>
+          </dl>
+          <p v-if="afterInvest < 0" class="mt-2 text-xs text-destructive" role="alert">O investimento passa da sobra deste mês.</p>
+          <div class="mt-3 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
+            <Label for="invest-done" class="cursor-pointer">Já aportei neste mês</Label>
+            <Switch id="invest-done" :model-value="month.investDone" @update:model-value="month.toggleInvestDone()" />
+          </div>
         </Card>
       </div>
     </div>

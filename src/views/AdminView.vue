@@ -74,7 +74,7 @@ async function approve(i: number) {
 </script>
 
 <template>
-  <div class="grid gap-4">
+  <div class="grid grid-cols-[minmax(0,1fr)] gap-4">
     <div class="flex flex-wrap items-end justify-between gap-3">
       <div>
         <h1 class="text-xl font-semibold tracking-tight sm:text-2xl">Administração</h1>

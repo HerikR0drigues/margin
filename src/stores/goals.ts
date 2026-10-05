@@ -75,7 +75,7 @@ export const useGoals = defineStore('goals', () => {
   /** O objetivo como o planejador enxerga: só a parte do usuário. */
   const effective = (g: Goal) => effectiveGoal(g, itemsOf(g.id))
   const totals = (g: Goal, month = currentMonthKey(), skipInBill = false) =>
-    totalsFor(itemsOf(g.id), g.my_share, month, skipInBill)
+    totalsFor(itemsOf(g.id), g.my_share, month, skipInBill, g.target_amount)
 
   /** Valor inicial (já com o que foi pago à vista nos itens) + aportes registrados. */
   function savedFor(goal: Goal) {

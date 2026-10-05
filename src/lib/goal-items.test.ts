@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { effectiveGoal, installmentDue, installmentNet, summarizeItem, totalsFor } from './goal-items'
+import { effectiveGoal, installmentDue, installmentNet, summarizeItem, totalsFor, undetailedOf } from './goal-items'
 import type { Goal, GoalItem } from './types'
 
 const cash = (o: Partial<GoalItem> = {}): GoalItem => ({
@@ -49,9 +49,9 @@ describe('reembolso', () => {
     expect(t.myRemaining).toBe(1000)
   })
   it('reduz o valor a guardar; em itens parcelados só reduz o custo total', () => {
-    const e = effectiveGoal(goal(), [cash({ reimbursement: 1000 })])
+    const e = effectiveGoal(goal({ target_amount: 4000 }), [cash({ reimbursement: 1000 })])
     expect(e.target_amount).toBe(1000) // 4000 × 0,5 − 1000
-    const p = effectiveGoal(goal(), [parc({ reimbursement: 400 })])
+    const p = effectiveGoal(goal({ target_amount: 3000 }), [parc({ reimbursement: 400 })])
     expect(p.target_amount).toBe(250) // só a entrada: 500 × 0,5
     expect(summarizeItem(parc({ reimbursement: 400 })).remaining).toBe(1760) // 3200 − 400 − 1040
   })
@@ -62,6 +62,30 @@ describe('dentro da fatura', () => {
     const i = parc({ in_card_bill: true })
     expect(totalsFor([i], 0.5, '2026-12-01', true).myInstallmentsNow).toBe(0)
     expect(totalsFor([i], 0.5, '2026-12-01', false).myInstallmentsNow).toBe(270)
+  })
+})
+
+describe('a detalhar', () => {
+  const passagem = () => parc({
+    amount: 9500, down_payment: 0, installments: 4, installment_amount: 2375,
+    first_month: '2026-10-01', paid_amount: 0, paid_installments: 0,
+  })
+  it('a diferença entre o valor do objetivo e os itens entra como estimativa a guardar', () => {
+    expect(undetailedOf(20000, [passagem()])).toBe(10500)
+    expect(undetailedOf(5000, [passagem()])).toBe(0) // itens passam do valor: nada a detalhar
+    // caso real: 20k, metade cada, só a passagem (parcelada, sem entrada) cadastrada
+    const e = effectiveGoal(goal({ target_amount: 20000 }), [passagem()])
+    expect(e.target_amount).toBe(5250) // 10.500 × 0,5
+  })
+  it('entra no total e no que falta, mas não nas parcelas do mês', () => {
+    const t = totalsFor([passagem()], 0.5, '2026-10-01', false, 20000)
+    expect(t.undetailed).toBe(10500)
+    expect(t.total).toBe(20000)
+    expect(t.myTotal).toBe(10000)
+    expect(t.myInstallmentsNow).toBe(1187.5)
+  })
+  it('sem o valor do objetivo, nada a detalhar', () => {
+    expect(totalsFor([passagem()], 0.5, '2026-10-01').undetailed).toBe(0)
   })
 })
 
@@ -114,7 +138,7 @@ describe('effectiveGoal', () => {
     expect(effectiveGoal(goal({ my_share: 1 }), []).target_amount).toBe(20000)
   })
   it('com itens: guarda só à vista + entrada, e o já pago conta como guardado', () => {
-    const e = effectiveGoal(goal({ saved_amount: 100 }), [cash({ paid_amount: 1000 }), parc()])
+    const e = effectiveGoal(goal({ saved_amount: 100, target_amount: 7000 }), [cash({ paid_amount: 1000 }), parc()])
     expect(e.target_amount).toBe(2250) // (4000 + 500) × 0,5
     expect(e.saved_amount).toBe(850) // 100 + (1000 + 500) × 0,5
     expect(e.financing).toBe(false)

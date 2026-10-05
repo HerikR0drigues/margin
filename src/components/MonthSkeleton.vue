@@ -5,50 +5,64 @@ import Skeleton from '@/components/ui/Skeleton.vue'
 </script>
 
 <template>
-  <div class="grid gap-4" role="status" aria-busy="true" aria-label="Carregando o mês">
-    <!-- resumo -->
+  <div class="grid grid-cols-[minmax(0,1fr)] gap-4" role="status" aria-busy="true" aria-label="Carregando o mês">
+    <!-- resumo: duas colunas, igual à tela -->
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-      <Card class="p-5 sm:p-6">
-        <div class="flex items-center justify-between">
-          <Skeleton class="h-4 w-32" />
-          <Skeleton class="h-4 w-20" />
-        </div>
-        <Skeleton class="mt-4 h-14 w-56" />
-        <Skeleton class="mt-3 h-4 w-3/4" />
-        <Skeleton class="mt-5 h-2 w-full rounded-full" />
-        <div class="mt-6 grid grid-cols-2 gap-4 border-t pt-4 sm:grid-cols-4">
-          <div v-for="i in 4" :key="i" class="grid gap-2">
-            <Skeleton class="h-3 w-16" />
-            <Skeleton class="h-5 w-24" />
+      <div class="grid grid-rows-[auto_1fr] gap-4">
+        <Card class="p-5 sm:p-6">
+          <div class="flex items-center justify-between">
+            <Skeleton class="h-4 w-32" />
+            <Skeleton class="h-4 w-20" />
           </div>
-        </div>
-      </Card>
+          <Skeleton class="mt-4 h-14 w-56" />
+          <Skeleton class="mt-3 h-4 w-3/4" />
+          <Skeleton class="mt-5 h-2 w-full rounded-full" />
+          <div class="mt-6 grid grid-cols-2 gap-4 border-t pt-4 sm:grid-cols-4">
+            <div v-for="i in 4" :key="i" class="grid gap-2">
+              <Skeleton class="h-3 w-16" />
+              <Skeleton class="h-5 w-24" />
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <Skeleton class="h-4 w-28" />
+          <Skeleton class="mt-4 h-1.5 w-full rounded-full" />
+          <div class="mt-4 grid grid-cols-2 gap-4">
+            <div v-for="i in 2" :key="i" class="grid gap-2"><Skeleton class="h-3 w-14" /><Skeleton class="h-5 w-24" /></div>
+          </div>
+        </Card>
+      </div>
       <div class="grid content-start gap-4">
         <Card>
           <Skeleton class="h-3 w-28" />
           <Skeleton class="mt-3 h-11 w-full" />
         </Card>
         <Card>
-          <Skeleton class="h-3 w-24" />
+          <Skeleton class="h-4 w-28" />
           <Skeleton class="mt-3 h-8 w-full" />
-          <Skeleton class="mt-3 h-8 w-full" />
+          <Skeleton class="mt-3 h-9 w-full" />
+        </Card>
+        <Card>
+          <Skeleton class="h-4 w-28" />
+          <Skeleton class="mt-3 h-11 w-full" />
+          <Skeleton class="mt-3 h-8 w-3/4" />
         </Card>
       </div>
     </div>
 
-    <!-- gráficos -->
-    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
+    <!-- gráficos: mesma divisão de colunas da linha de cima -->
+    <div class="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+      <Card>
+        <Skeleton class="h-3 w-24" />
+        <div class="mt-5 flex h-44 items-end gap-3">
+          <Skeleton v-for="h in [40, 64, 52, 80, 58, 72, 46, 88, 60, 70, 54, 76]" :key="h" class="flex-1" :style="{ height: h + '%' }" />
+        </div>
+      </Card>
       <Card>
         <Skeleton class="h-3 w-32" />
         <Skeleton class="mx-auto mt-5 size-40 rounded-full" />
         <div class="mt-5 grid gap-3">
           <Skeleton v-for="i in 3" :key="i" class="h-4 w-full" />
-        </div>
-      </Card>
-      <Card>
-        <Skeleton class="h-3 w-24" />
-        <div class="mt-5 flex h-44 items-end gap-3">
-          <Skeleton v-for="h in [40, 64, 52, 80, 58, 72, 46, 88, 60, 70, 54, 76]" :key="h" class="flex-1" :style="{ height: h + '%' }" />
         </div>
       </Card>
     </div>

@@ -59,6 +59,9 @@ export const useMonth = defineStore('month', () => {
   const goals = useGoals()
   const key = ref(currentMonthKey())
   const salary = ref(0)
+  /** quanto da sobra vai para investimentos neste mês (não é gasto) */
+  const invest = ref(0)
+  const investDone = ref(false)
   const entries = ref<MonthEntry[]>([])
   const incomes = ref<Income[]>([])
   const trend = ref<TrendMonth[]>([])
@@ -201,7 +204,7 @@ export const useMonth = defineStore('month', () => {
       if (ensured.error) throw ensured.error
       const [ents, set, inc] = await Promise.all([
         supabase.from('month_entries').select('*').eq('month', k).order('due_day').order('name'),
-        supabase.from('month_settings').select('salary').eq('month', k).maybeSingle(),
+        supabase.from('month_settings').select('salary, invest, invest_done').eq('month', k).maybeSingle(),
         supabase.from('month_incomes').select('*').eq('month', k).order('created_at'),
       ])
       if (ents.error) throw ents.error
@@ -211,6 +214,8 @@ export const useMonth = defineStore('month', () => {
       if (id !== requestId) return
       entries.value = (ents.data ?? []).map(mapEntry)
       salary.value = toNum(set.data?.salary)
+      invest.value = toNum(set.data?.invest ?? 0) || 0
+      investDone.value = !!set.data?.invest_done
       incomes.value = (inc.data ?? []).map(mapIncome)
     } catch (e) {
       if (id === requestId) toast.error(e)
@@ -234,6 +239,26 @@ export const useMonth = defineStore('month', () => {
       .upsert({ month: key.value, salary: value }, { onConflict: 'user_id,month' })
     if (error) return toast.error(error)
     await refreshTrend()
+  }
+
+  async function saveInvest(value: number) {
+    invest.value = value
+    const { error } = await supabase
+      .from('month_settings')
+      .upsert({ month: key.value, invest: value }, { onConflict: 'user_id,month' })
+    if (error) toast.error(error)
+  }
+
+  async function toggleInvestDone() {
+    const done = !investDone.value
+    investDone.value = done
+    const { error } = await supabase
+      .from('month_settings')
+      .upsert({ month: key.value, invest_done: done }, { onConflict: 'user_id,month' })
+    if (error) {
+      investDone.value = !done
+      toast.error(error)
+    }
   }
 
   async function addIncome(description: string, amount: number) {
@@ -326,8 +351,8 @@ export const useMonth = defineStore('month', () => {
   }
 
   return {
-    key, salary, entries, incomes, trend, loading,
+    key, salary, invest, investDone, entries, incomes, trend, loading,
     visible, bills, hasBill, topEntries, insideRows, insideGross, undetailed, total, reimbPending, reimbReceived, cardTotal, cardCount, paidTotal, pendingTotal, paidCount, estimateCount, byCategory, extraIncome, income, free, previousTotal,
-    load, saveSalary, addIncome, removeIncome, addOneOff, addRecurring, toggleReimbursed, updateEntry, togglePaid, removeEntry, restoreEntry,
+    load, saveSalary, saveInvest, toggleInvestDone, addIncome, removeIncome, addOneOff, addRecurring, toggleReimbursed, updateEntry, togglePaid, removeEntry, restoreEntry,
   }
 })
