@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { effectiveGoal, installmentDue, installmentNet, summarizeItem, totalsFor, undetailedOf } from './goal-items'
+import { effectiveGoal, installmentDue, installmentNet, myItemCost, summarizeItem, totalsFor, undetailedOf } from './goal-items'
 import type { Goal, GoalItem } from './types'
 
 const cash = (o: Partial<GoalItem> = {}): GoalItem => ({
@@ -86,6 +86,15 @@ describe('a detalhar', () => {
   })
   it('sem o valor do objetivo, nada a detalhar', () => {
     expect(totalsFor([passagem()], 0.5, '2026-10-01').undetailed).toBe(0)
+  })
+})
+
+describe('myItemCost', () => {
+  it('é a parte do usuário depois de dividir, menos o reembolso', () => {
+    expect(myItemCost(10500, 0, 0.5)).toBe(5250) // item de 10.500 dividido ao meio
+    expect(myItemCost(10500, 0, 1)).toBe(10500) // sem divisão, paga tudo
+    expect(myItemCost(10500, 1000, 0.5)).toBe(4250)
+    expect(myItemCost(1000, 9000, 0.5)).toBe(0) // nunca negativo
   })
 })
 

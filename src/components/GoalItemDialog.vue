@@ -8,6 +8,7 @@ import MoneyInput from '@/components/ui/MoneyInput.vue'
 import Segmented from '@/components/ui/Segmented.vue'
 import Switch from '@/components/ui/Switch.vue'
 import { addMonths, brl, currentMonthKey, fromMonthInput, num2, parseMoney, toMonthInput } from '@/lib/format'
+import { myItemCost } from '@/lib/goal-items'
 import type { GoalItem, ItemPayment } from '@/lib/types'
 import { useGoals, type GoalItemInput } from '@/stores/goals'
 
@@ -107,6 +108,24 @@ const preview = computed(() => {
   if (!(count >= 1) || !(p > 0)) return null
   const total = d + count * p
   return { total, interest: Math.max(total - price, 0) }
+})
+
+/** Resumo ao vivo: quanto do item fica com você, depois de dividir e abater o reembolso. */
+const mine = computed(() => {
+  const share = props.share ?? 1
+  const price = money(amount.value)
+  if (!Number.isFinite(price) || price <= 0) return null
+  let total = price
+  let perMonth: number | null = null
+  if (payment.value === 'installments') {
+    const count = parseInt(n.value, 10)
+    const p = money(parcel.value)
+    if (!(count >= 1) || !(p > 0)) return null
+    total = money(down.value) + count * p
+    perMonth = Math.max(Math.round((p * share - (hasReimb.value ? money(reimbursement.value) : 0) / count) * 100) / 100, 0)
+  }
+  const reimb = hasReimb.value ? Math.min(money(reimbursement.value), total) : 0
+  return { total, share, reimb, mine: myItemCost(total, reimb, share), perMonth }
 })
 
 async function submit() {
@@ -239,7 +258,7 @@ const round = (v: number) => Math.round(v * 100) / 100
           Tem reembolso
           <span class="block text-xs font-normal text-muted-foreground">Ao ligar, já sugere 50% do valor. Você pode editar.</span>
           <span v-if="(share ?? 1) < 1" class="mt-1 block text-xs font-normal text-primary-text">
-            Este objetivo já é dividido ({{ Math.round((share ?? 1) * 100) }}% seu). Use reembolso só para dinheiro que vem de fora, como a empresa. Não use para a parte da outra pessoa: ela já está descontada.
+            Só para dinheiro de fora (ex.: empresa). A divisão com a outra pessoa já é feita sozinha.
           </span>
         </Label>
         <Switch id="i-has-reimb" v-model="hasReimb" />
@@ -255,6 +274,22 @@ const round = (v: number) => Math.round(v * 100) / 100
       <div v-if="hasReimb && money(reimbursement) > 0" class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
         <Label for="i-got" class="cursor-pointer">Reembolso já recebido</Label>
         <Switch id="i-got" v-model="reimbursed" />
+      </div>
+
+      <div v-if="mine" class="rounded-lg border border-primary/40 bg-accent/40 px-3 py-2.5 text-sm">
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="font-medium">Sua parte neste item</span>
+          <span class="text-base font-semibold tabular-nums">{{ brl(mine.mine) }}</span>
+        </div>
+        <p class="mt-1 text-xs text-muted-foreground">
+          <template v-if="mine.share < 1">
+            Item de {{ brl(mine.total) }} dividido: {{ Math.round(mine.share * 100) }}% é seu ({{ brl(mine.total * mine.share) }})
+            e {{ Math.round((1 - mine.share) * 100) }}% é da outra pessoa ({{ brl(mine.total * (1 - mine.share)) }}).
+          </template>
+          <template v-else>Objetivo sem divisão: o item é todo seu.</template>
+          <template v-if="mine.reimb > 0"> Reembolso de {{ brl(mine.reimb) }} abatido da sua parte.</template>
+          <template v-if="mine.perMonth != null"> Por parcela, você paga {{ brl(mine.perMonth) }}.</template>
+        </p>
       </div>
 
       <p v-if="error" class="text-sm text-destructive" role="alert">{{ error }}</p>

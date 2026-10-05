@@ -12,7 +12,7 @@ import GoalItemDialog from '@/components/GoalItemDialog.vue'
 import ProjectionChart from '@/components/charts/ProjectionChart.vue'
 import { GOAL_KINDS } from '@/lib/categories'
 import { addMonths, brl, brl0, currentMonthKey, diffMonths, monthLabel, num2, parseMoney, pct } from '@/lib/format'
-import { summarizeItem } from '@/lib/goal-items'
+import { myItemCost, summarizeItem } from '@/lib/goal-items'
 import { planInput } from '@/lib/goal-plan'
 import { budgetImpact, planGoal, projection, severity } from '@/lib/planner'
 import type { Goal, GoalItem } from '@/lib/types'
@@ -253,7 +253,12 @@ function askRemove(g: Goal) {
                   <span v-if="itemLine(i).detail">{{ itemLine(i).detail }}</span>
                 </div>
               </div>
-              <div class="text-right text-sm font-medium tabular-nums">{{ brl(summarizeItem(i).total) }}</div>
+              <div class="text-right text-sm font-medium tabular-nums">
+                {{ brl(summarizeItem(i).total) }}
+                <div v-if="c.g.my_share < 1 || i.reimbursement > 0" class="text-xs font-normal text-primary-text">
+                  sua parte {{ brl(myItemCost(summarizeItem(i).total, summarizeItem(i).reimbursement, c.g.my_share)) }}
+                </div>
+              </div>
               <div class="flex items-center">
                 <Button variant="ghost" size="icon-sm" :aria-label="'Editar ' + i.name" @click="openItem(c.g.id, i)"><Pencil /></Button>
                 <Button

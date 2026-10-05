@@ -91,6 +91,11 @@ export function undetailedOf(goalTarget: number, items: GoalItem[]): number {
   return Math.max(r2(goalTarget - detailed), 0)
 }
 
+/** O que o item custa para o usuário: o custo dividido pela parte dele, menos o reembolso (nunca negativo). */
+export function myItemCost(total: number, reimbursement: number, share: number): number {
+  return Math.max(r2(total * share - reimbursement), 0)
+}
+
 export interface GoalTotals {
   /** custo de todos os itens (visão do casal) */
   total: number
