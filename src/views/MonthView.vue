@@ -84,6 +84,57 @@ const note = computed(() => {
 })
 const delta = computed(() => (month.previousTotal == null ? null : month.total - month.previousTotal))
 
+/* ---------- para onde vai a renda ---------- */
+const flow = computed(() => {
+  const income = month.income
+  const spent = month.total
+  const goalsCost = impact.value.committed
+  const invest = invested.value
+  const free = income - spent - goalsCost - invest
+  const base = Math.max(income, spent + goalsCost + invest, 1)
+  const pctOf = (v: number) => (income > 0 ? Math.round((v / income) * 100) : null)
+  const goalNames = goals.goals
+    .map((g, i) => ({ name: g.name, v: (plans.value[i]?.monthly ?? 0) + goals.totals(g, month.key, month.hasBill).myInstallmentsNow }))
+    .filter((x) => x.v > 0.005)
+  const segs = [
+    { key: 'spent', label: 'Gastos', value: spent, color: 'var(--chart-1)' },
+    { key: 'goals', label: 'Metas', value: goalsCost, color: 'var(--chart-3)' },
+    { key: 'invest', label: 'Investimento', value: invest, color: 'var(--chart-5)' },
+    { key: 'free', label: free < 0 ? 'Faltou' : 'Livre', value: Math.abs(free), color: free < 0 ? 'var(--crit)' : 'color-mix(in oklab, var(--good) 70%, transparent)' },
+  ]
+  const delta = month.previousTotal == null ? null : spent - month.previousTotal
+  return {
+    segments: segs.filter((x) => x.value > 0.005).map((x) => ({ ...x, pct: (x.value / base) * 100 })),
+    rows: [
+      {
+        key: 'income', sign: '', label: 'Renda do mês', value: income, color: '', pct: null, strong: false, negative: false,
+        caption: month.extraIncome > 0 ? `Salário ${brl(month.salary)} + ${brl(month.extraIncome)} de extras` : 'Salário',
+      },
+      {
+        key: 'spent', sign: '−', label: 'Gastos do mês', value: spent, color: 'var(--chart-1)', pct: pctOf(spent), strong: false, negative: false,
+        caption: month.hasBill
+          ? `Inclui a fatura do cartão (${brl(month.cardTotal)}) uma vez só`
+          : delta != null && Math.abs(delta) >= 0.005 ? `${delta > 0 ? 'Subiu' : 'Caiu'} ${brl0(Math.abs(delta))} vs mês anterior` : '',
+      },
+      {
+        key: 'goals', sign: '−', label: 'Metas por mês', value: goalsCost, color: 'var(--chart-3)', pct: pctOf(goalsCost), strong: false, negative: false,
+        caption: goalNames.length ? goalNames.map((x) => `${x.name} ${brl0(x.v)}`).join(' · ') : 'Nenhuma meta pesando neste mês',
+      },
+      {
+        key: 'invest', sign: '−', label: 'Investimento', value: invest, color: 'var(--chart-5)', pct: pctOf(invest), strong: false, negative: false,
+        caption: invest > 0 ? (month.investDone ? 'Já aportado' : 'Planejado') : 'Defina no cartão Investimentos',
+      },
+      {
+        key: 'free', sign: '=', label: free < 0 ? 'Faltou no mês' : 'Livre no fim', value: free, color: '', pct: null, strong: true, negative: free < 0,
+        caption: free < 0 ? 'Os gastos, metas e investimento passam da renda' : 'O que fica depois de tudo',
+      },
+    ],
+  }
+})
+const flowAria = computed(
+  () => `Renda de ${brl(month.income)}: gastos ${brl(month.total)}, metas ${brl(impact.value.committed)}, investimento ${brl(invested.value)}.`,
+)
+
 const plans = computed(() => goals.goals.map((g) => planGoal(planInput(goals.effective(g), goals.savedFor(g)), REAL)))
 const impact = computed(() =>
   budgetImpact(
@@ -236,7 +287,7 @@ function askRemove(e: MonthEntry) {
         <Card class="p-5 sm:p-6">
           <div class="flex items-center justify-between gap-2">
             <h2 class="text-sm font-medium text-muted-foreground">
-              {{ heroParts.neg ? 'Faltam em' : 'Sobra em' }} {{ monthName(month.key) }}
+              {{ heroParts.neg ? 'Faltam em' : 'Sobra em' }} {{ monthName(month.key) }}, depois dos gastos
             </h2>
             <span v-if="month.income > 0" class="inline-flex items-center gap-1.5 text-[13px] font-medium">
               <component :is="sevIcon[sev.key]" class="size-4" :class="sevText[sev.key]" />
@@ -249,36 +300,34 @@ function askRemove(e: MonthEntry) {
             <span class="text-2xl text-muted-foreground">,{{ heroParts.dec }}</span>
           </div>
           <p class="mt-2 max-w-[52ch] text-sm text-muted-foreground">{{ note }}</p>
-          <div
-            class="mt-4 h-2 overflow-hidden rounded-full bg-secondary"
-            role="img"
-            :aria-label="month.income > 0 ? `${sev.label}: ${Math.round(ratio * 100)}% do salário comprometido` : 'Salário não informado'"
-          >
-            <div class="h-full rounded-full transition-[width] duration-500" :class="sevBar[sev.key]" :style="{ width: Math.min(ratio, 1) * 100 + '%' }" />
+          <!-- para onde vai a renda: uma barra dividida em partes e a conta passo a passo -->
+          <div class="mt-5" role="img" :aria-label="flowAria">
+            <div class="flex h-3.5 gap-0.5 overflow-hidden rounded-full bg-secondary">
+              <div
+                v-for="seg in flow.segments"
+                :key="seg.key"
+                class="h-full transition-[width] duration-500 first:rounded-l-full last:rounded-r-full"
+                :style="{ width: seg.pct + '%', background: seg.color }"
+                :title="`${seg.label}: ${brl(seg.value)}`"
+              />
+            </div>
           </div>
-          <dl class="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 border-t pt-4 sm:grid-cols-4">
-            <div>
-              <dt class="text-xs text-muted-foreground">Salário</dt>
-              <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.salary) }}</dd>
-              <dd v-if="month.extraIncome > 0" class="mt-0.5 text-xs text-brand-300">+ {{ brl(month.extraIncome) }} extras</dd>
-            </div>
-            <div>
-              <dt class="text-xs text-muted-foreground">Gastos do mês</dt>
-              <dd class="mt-0.5 font-medium tabular-nums">{{ brl(month.total) }}</dd>
-              <dd v-if="delta != null && Math.abs(delta) >= 0.005" class="mt-0.5 flex items-center gap-1 text-xs" :class="delta > 0 ? 'text-serious' : 'text-good'">
-                <component :is="delta > 0 ? ArrowUp : ArrowDown" class="size-3" />
-                {{ brl0(Math.abs(delta)) }} vs mês anterior
-              </dd>
-            </div>
-            <div>
-              <dt class="text-xs text-muted-foreground">Metas por mês</dt>
-              <dd class="mt-0.5 font-medium tabular-nums">{{ brl(impact.committed) }}</dd>
-            </div>
-            <div>
-              <dt class="text-xs text-muted-foreground">Depois das metas</dt>
-              <dd class="mt-0.5 font-medium tabular-nums" :class="impact.leftover < 0 ? 'text-destructive' : ''">{{ brl(impact.leftover) }}</dd>
-            </div>
-          </dl>
+          <ul class="mt-4 grid border-t pt-2">
+            <li v-for="row in flow.rows" :key="row.key" class="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 py-2" :class="row.strong ? 'border-t mt-1 pt-3' : ''">
+              <span class="text-sm text-muted-foreground" aria-hidden="true">{{ row.sign }}</span>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 text-sm" :class="row.strong ? 'font-semibold' : 'font-medium'">
+                  <span v-if="row.color" class="size-2.5 shrink-0 rounded-sm" :style="{ background: row.color }" />
+                  {{ row.label }}
+                </div>
+                <div v-if="row.caption" class="mt-0.5 text-xs text-muted-foreground">{{ row.caption }}</div>
+              </div>
+              <div class="text-right">
+                <div class="tabular-nums" :class="[row.strong ? 'text-lg font-semibold' : 'font-medium', row.negative ? 'text-destructive' : '']">{{ brl(row.value) }}</div>
+                <div v-if="row.pct != null" class="text-xs tabular-nums text-muted-foreground">{{ row.pct }}% da renda</div>
+              </div>
+            </li>
+          </ul>
         </Card>
 
           <Card class="flex flex-col">
