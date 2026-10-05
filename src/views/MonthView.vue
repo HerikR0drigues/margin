@@ -232,7 +232,7 @@ function askRemove(e: MonthEntry) {
     <template v-else>
     <!-- resumo -->
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-      <div class="grid grid-rows-[auto_1fr] gap-4">
+      <div class="grid min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr] gap-4">
         <Card class="p-5 sm:p-6">
           <div class="flex items-center justify-between gap-2">
             <h2 class="text-sm font-medium text-muted-foreground">
@@ -315,7 +315,7 @@ function askRemove(e: MonthEntry) {
             </div>
           </Card>
       </div>
-      <div class="grid content-start gap-4">
+      <div class="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-4">
         <Card>
           <label for="salary" class="text-xs font-medium text-muted-foreground">Salário de {{ monthName(month.key) }}</label>
           <div class="mt-2 flex items-center gap-2 rounded-lg border border-input px-3 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">

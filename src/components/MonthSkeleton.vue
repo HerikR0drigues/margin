@@ -8,7 +8,7 @@ import Skeleton from '@/components/ui/Skeleton.vue'
   <div class="grid grid-cols-[minmax(0,1fr)] gap-4" role="status" aria-busy="true" aria-label="Carregando o mês">
     <!-- resumo: duas colunas, igual à tela -->
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-      <div class="grid grid-rows-[auto_1fr] gap-4">
+      <div class="grid min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr] gap-4">
         <Card class="p-5 sm:p-6">
           <div class="flex items-center justify-between">
             <Skeleton class="h-4 w-32" />
@@ -32,7 +32,7 @@ import Skeleton from '@/components/ui/Skeleton.vue'
           </div>
         </Card>
       </div>
-      <div class="grid content-start gap-4">
+      <div class="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-4">
         <Card>
           <Skeleton class="h-3 w-28" />
           <Skeleton class="mt-3 h-11 w-full" />
