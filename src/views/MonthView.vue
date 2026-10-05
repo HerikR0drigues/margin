@@ -21,11 +21,13 @@ import { addMonths, brl, brl0, currentMonthKey, monthLabel, monthName, num2, mas
 import { planInput } from '@/lib/goal-plan'
 import { budgetImpact, planGoal, severity } from '@/lib/planner'
 import type { MonthEntry } from '@/lib/types'
+import { useConfirm } from '@/stores/confirm'
 import { useGoals } from '@/stores/goals'
 import { useMonth } from '@/stores/month'
 
 const month = useMonth()
 const goals = useGoals()
+const confirm = useConfirm()
 const REAL = currentMonthKey()
 
 onMounted(() => {
@@ -250,17 +252,41 @@ async function commitAmount(e: MonthEntry) {
   if (value !== e.amount || e.is_estimate) await month.updateEntry(e, { amount: value })
 }
 
-const confirmId = ref<string | null>(null)
-let confirmTimer: ReturnType<typeof setTimeout> | undefined
-function askRemove(e: MonthEntry) {
-  if (confirmId.value === e.id) {
-    confirmId.value = null
-    void month.removeEntry(e)
-    return
+async function askRemove(e: MonthEntry) {
+  const mes = monthName(month.key)
+  let ok: boolean
+  if (e.card_bill) {
+    const n = month.insideRows.length
+    ok = await confirm.ask({
+      title: 'Pular a fatura do cartão?',
+      description: `A fatura de ${mes}${n ? ` e os ${n} ${n === 1 ? 'item' : 'itens'} dentro dela` : ''} saem da conta deste mês. Você pode restaurar depois em "Pulados neste mês".`,
+      confirmLabel: 'Pular a fatura',
+      danger: true,
+    })
+  } else if (e.recurring_id) {
+    ok = await confirm.ask({
+      title: `Pular "${e.name}" neste mês?`,
+      description: `Ele sai da conta só de ${mes}. Nos outros meses continua normalmente. Você pode restaurar depois em "Pulados neste mês".`,
+      confirmLabel: 'Pular neste mês',
+    })
+  } else {
+    ok = await confirm.ask({
+      title: `Excluir "${e.name}"?`,
+      description: 'Este gasto avulso será removido. Não dá para desfazer.',
+      confirmLabel: 'Excluir',
+      danger: true,
+    })
   }
-  confirmId.value = e.id
-  clearTimeout(confirmTimer)
-  confirmTimer = setTimeout(() => (confirmId.value = null), 3000)
+  if (ok) await month.removeEntry(e)
+}
+async function askRemoveIncome(inc: { id: string; description: string }) {
+  const ok = await confirm.ask({
+    title: `Remover "${inc.description}"?`,
+    description: 'A renda extra sai da conta deste mês. Não dá para desfazer.',
+    confirmLabel: 'Remover',
+    danger: true,
+  })
+  if (ok) await month.removeIncome(inc.id)
 }
 </script>
 
@@ -394,7 +420,7 @@ function askRemove(e: MonthEntry) {
               <span class="min-w-0 truncate">{{ inc.description }}</span>
               <span class="flex shrink-0 items-center gap-1">
                 <span class="font-medium tabular-nums">{{ brl(inc.amount) }}</span>
-                <Button variant="ghost" size="icon-sm" :aria-label="'Remover ' + inc.description" @click="month.removeIncome(inc.id)"><Trash2 /></Button>
+                <Button variant="ghost" size="icon-sm" :aria-label="'Remover ' + inc.description" @click="askRemoveIncome(inc)"><Trash2 /></Button>
               </span>
             </li>
           </ul>
@@ -580,9 +606,8 @@ function askRemove(e: MonthEntry) {
             <Button
               variant="ghost"
               size="icon-sm"
-              :class="confirmId === e.id ? 'text-destructive' : ''"
               :aria-label="(e.recurring_id ? 'Pular neste mês: ' : 'Excluir: ') + e.name"
-              :title="confirmId === e.id ? (e.card_bill ? 'Isto tira a fatura e tudo o que está dentro dela deste mês. Clique de novo para confirmar' : 'Clique de novo para confirmar') : e.card_bill ? 'Pular a fatura inteira neste mês' : e.recurring_id ? 'Pular neste mês' : 'Excluir'"
+              :title="e.card_bill ? 'Pular a fatura inteira neste mês' : e.recurring_id ? 'Pular neste mês' : 'Excluir'"
               @click="askRemove(e)"
             >
               <component :is="e.recurring_id ? SkipForward : Trash2" />

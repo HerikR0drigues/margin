@@ -5,6 +5,7 @@ import { hasSupabaseEnv } from '@/lib/supabase'
 import { useAuth } from '@/stores/auth'
 import AppShell from '@/components/AppShell.vue'
 import SetupMissing from '@/components/SetupMissing.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import Toaster from '@/components/ui/Toaster.vue'
 
@@ -41,5 +42,6 @@ watch(
     </AppShell>
     <RouterView v-else />
   </template>
+  <ConfirmDialog />
   <Toaster />
 </template>

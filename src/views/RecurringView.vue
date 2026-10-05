@@ -10,9 +10,11 @@ import RecurringDialog from '@/components/RecurringDialog.vue'
 import { categoryById } from '@/lib/categories'
 import { addMonths, brl, currentMonthKey, monthLabel } from '@/lib/format'
 import type { Recurring } from '@/lib/types'
+import { useConfirm } from '@/stores/confirm'
 import { useRecurring } from '@/stores/recurring'
 
 const store = useRecurring()
+const confirm = useConfirm()
 onMounted(() => void store.load())
 
 const NOW = currentMonthKey()
@@ -30,18 +32,16 @@ function edit(r: Recurring) {
   editOpen.value = true
 }
 
-const confirmId = ref<string | null>(null)
-let timer: ReturnType<typeof setTimeout> | undefined
-function askEnd(r: Recurring) {
-  if (confirmId.value === r.id) {
-    confirmId.value = null
-    // encerra a partir do próximo mês: o mês atual já está lançado
-    void store.end(r.id, addMonths(NOW, 1))
-    return
-  }
-  confirmId.value = r.id
-  clearTimeout(timer)
-  timer = setTimeout(() => (confirmId.value = null), 3500)
+async function askEnd(r: Recurring) {
+  const from = monthLabel(addMonths(NOW, 1))
+  const ok = await confirm.ask({
+    title: `Encerrar "${r.name}"?`,
+    description: `Ele deixa de existir a partir de ${from}. Os meses até aqui continuam como estão. Não dá para desfazer.`,
+    confirmLabel: 'Encerrar',
+    danger: true,
+  })
+  // encerra a partir do próximo mês: o mês atual já está lançado
+  if (ok) await store.end(r.id, addMonths(NOW, 1))
 }
 </script>
 
@@ -86,9 +86,8 @@ function askEnd(r: Recurring) {
             <Button
               variant="ghost"
               size="icon-sm"
-              :class="confirmId === r.id ? 'text-destructive' : ''"
               :aria-label="'Encerrar ' + r.name"
-              :title="confirmId === r.id ? 'Clique de novo para encerrar a partir do próximo mês' : 'Encerrar a partir do próximo mês'"
+              title="Encerrar a partir do próximo mês"
               @click="askEnd(r)"
             >
               <Square />

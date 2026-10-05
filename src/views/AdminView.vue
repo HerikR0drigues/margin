@@ -13,8 +13,28 @@ import Segmented from '@/components/ui/Segmented.vue'
 import InviteLinkDialog from '@/components/InviteLinkDialog.vue'
 import type { Invite } from '@/lib/types'
 import { useAdmin } from '@/stores/admin'
+import { useConfirm } from '@/stores/confirm'
 
 const admin = useAdmin()
+const confirm = useConfirm()
+async function askReject(r: Parameters<typeof admin.rejectRequest>[0]) {
+  const ok = await confirm.ask({
+    title: `Recusar o pedido de ${r.name}?`,
+    description: 'A pessoa não recebe convite. Não dá para desfazer.',
+    confirmLabel: 'Recusar',
+    danger: true,
+  })
+  if (ok) await admin.rejectRequest(r)
+}
+async function askRevoke(i: { id: string; note?: string | null }) {
+  const ok = await confirm.ask({
+    title: 'Cancelar este convite?',
+    description: `O link${i.note ? ` de ${i.note}` : ''} deixa de funcionar. Quem ainda não criou a conta não vai mais conseguir.`,
+    confirmLabel: 'Cancelar convite',
+    danger: true,
+  })
+  if (ok) await admin.revokeInvite(i.id)
+}
 onMounted(() => void admin.load())
 
 const tab = ref('requests')
@@ -94,7 +114,7 @@ async function approve(i: number) {
             <p v-if="r.message" class="mt-1 text-sm">{{ r.message }}</p>
           </div>
           <div class="flex gap-2">
-            <Button variant="outline" size="sm" @click="admin.rejectRequest(r)">Recusar</Button>
+            <Button variant="outline" size="sm" @click="askReject(r)">Recusar</Button>
             <Button size="sm" @click="approve(i)">Aprovar e gerar link</Button>
           </div>
         </li>
@@ -119,7 +139,7 @@ async function approve(i: number) {
           </div>
           <div class="flex items-center gap-2">
             <Badge :variant="inviteState(i) === 'ativo' ? 'primary' : 'outline'">{{ inviteState(i) }}</Badge>
-            <Button v-if="inviteState(i) === 'ativo'" variant="outline" size="sm" @click="admin.revokeInvite(i.id)">Cancelar</Button>
+            <Button v-if="inviteState(i) === 'ativo'" variant="outline" size="sm" @click="askRevoke(i)">Cancelar</Button>
           </div>
         </li>
       </ul>

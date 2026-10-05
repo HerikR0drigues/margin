@@ -16,11 +16,13 @@ import { myItemCost, summarizeItem } from '@/lib/goal-items'
 import { planInput } from '@/lib/goal-plan'
 import { budgetImpact, planGoal, projection, severity } from '@/lib/planner'
 import type { Goal, GoalItem } from '@/lib/types'
+import { useConfirm } from '@/stores/confirm'
 import { useGoals } from '@/stores/goals'
 import { useMonth } from '@/stores/month'
 
 const goals = useGoals()
 const month = useMonth()
+const confirm = useConfirm()
 const NOW = currentMonthKey()
 
 onMounted(() => {
@@ -84,17 +86,14 @@ function openItem(goalId: string, item: GoalItem | null) {
   editingItem.value = item
   itemOpen.value = true
 }
-const itemConfirm = ref<string | null>(null)
-let itemTimer: ReturnType<typeof setTimeout> | undefined
-function askRemoveItem(i: GoalItem) {
-  if (itemConfirm.value === i.id) {
-    itemConfirm.value = null
-    void goals.removeItem(i.id)
-    return
-  }
-  itemConfirm.value = i.id
-  clearTimeout(itemTimer)
-  itemTimer = setTimeout(() => (itemConfirm.value = null), 3000)
+async function askRemoveItem(i: GoalItem) {
+  const ok = await confirm.ask({
+    title: `Excluir o item "${i.name}"?`,
+    description: 'O item sai do objetivo e deixa de contar na conta. Não dá para desfazer.',
+    confirmLabel: 'Excluir item',
+    danger: true,
+  })
+  if (ok) await goals.removeItem(i.id)
 }
 function itemLine(i: GoalItem) {
   const s = summarizeItem(i)
@@ -123,17 +122,15 @@ async function contribute(g: Goal) {
   amounts.value = { ...amounts.value, [g.id]: '' }
 }
 
-const confirmId = ref<string | null>(null)
-let timer: ReturnType<typeof setTimeout> | undefined
-function askRemove(g: Goal) {
-  if (confirmId.value === g.id) {
-    confirmId.value = null
-    void goals.remove(g.id)
-    return
-  }
-  confirmId.value = g.id
-  clearTimeout(timer)
-  timer = setTimeout(() => (confirmId.value = null), 3000)
+async function askRemove(g: Goal) {
+  const n = goals.itemsOf(g.id).length
+  const ok = await confirm.ask({
+    title: `Excluir o objetivo "${g.name}"?`,
+    description: `${n ? `Os ${n} ${n === 1 ? 'item' : 'itens'} e ` : ''}os aportes registrados também serão apagados. Não dá para desfazer.`,
+    confirmLabel: 'Excluir objetivo',
+    danger: true,
+  })
+  if (ok) await goals.remove(g.id)
 }
 </script>
 
@@ -193,9 +190,8 @@ function askRemove(g: Goal) {
             <Button
               variant="ghost"
               size="icon-sm"
-              :class="confirmId === c.g.id ? 'text-destructive' : ''"
               :aria-label="'Excluir ' + c.g.name"
-              :title="confirmId === c.g.id ? 'Clique de novo para excluir' : 'Excluir'"
+              title="Excluir"
               @click="askRemove(c.g)"
             >
               <Trash2 />
@@ -272,9 +268,8 @@ function askRemove(g: Goal) {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  :class="itemConfirm === i.id ? 'text-destructive' : ''"
                   :aria-label="'Excluir ' + i.name"
-                  :title="itemConfirm === i.id ? 'Clique de novo para excluir' : 'Excluir'"
+                  title="Excluir"
                   @click="askRemoveItem(i)"
                 >
                   <Trash2 />
