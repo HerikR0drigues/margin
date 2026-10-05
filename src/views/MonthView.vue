@@ -364,7 +364,7 @@ function askRemove(e: MonthEntry) {
             </div>
           </Card>
       </div>
-      <div class="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-4">
+      <div class="grid min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto_1fr] gap-4">
         <Card>
           <label for="salary" class="text-xs font-medium text-muted-foreground">Salário de {{ monthName(month.key) }}</label>
           <div class="mt-2 flex items-center gap-2 rounded-lg border border-input px-3 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
@@ -408,7 +408,7 @@ function askRemove(e: MonthEntry) {
             <Button type="submit" variant="outline" size="sm" class="justify-self-start"><Plus /> Adicionar</Button>
           </form>
         </Card>
-        <Card>
+        <Card class="flex flex-col">
           <div class="flex items-center justify-between gap-2">
             <h2 class="text-sm font-medium">Investimentos</h2>
             <span v-if="invested > 0" class="text-xs tabular-nums text-muted-foreground">{{ Math.round(investPct * 100) }}% da sobra</span>
@@ -429,7 +429,20 @@ function askRemove(e: MonthEntry) {
             </div>
           </dl>
           <p v-if="afterInvest < 0" class="mt-2 text-xs text-destructive" role="alert">O investimento passa da sobra deste mês.</p>
-          <div class="mt-3 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
+          <div class="mt-4 flex-1">
+            <div class="flex items-baseline justify-between text-xs text-muted-foreground">
+              <span>Parte da sobra que vai investir</span>
+              <span class="tabular-nums">{{ Math.round(Math.min(investPct, 1) * 100) }}%</span>
+            </div>
+            <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary" role="img" :aria-label="`${Math.round(Math.min(investPct, 1) * 100)}% da sobra vai para investimentos`">
+              <div class="h-full rounded-full bg-brand-500 transition-[width] duration-500" :style="{ width: Math.min(investPct, 1) * 100 + '%' }" />
+            </div>
+            <p class="mt-3 text-xs text-muted-foreground">
+              <template v-if="invested > 0">Investindo isso todo mês, em 12 meses são <span class="font-medium text-foreground tabular-nums">{{ brl(invested * 12) }}</span> (sem rendimento).</template>
+              <template v-else>Escolha um valor ou um atalho acima para ver quanto isso soma em 12 meses.</template>
+            </p>
+          </div>
+          <div class="mt-auto flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
             <Label for="invest-done" class="cursor-pointer">Já aportei neste mês</Label>
             <Switch id="invest-done" :model-value="month.investDone" @update:model-value="month.toggleInvestDone()" />
           </div>
