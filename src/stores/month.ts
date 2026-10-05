@@ -16,6 +16,8 @@ export interface InsideRow {
   category: string
   gross: number
   reimbursement: number
+  /** parte da outra pessoa (objetivo dividido) dentro de uma parcela que você pagou no cartão */
+  other: number
   reimbursed: boolean
   entry: MonthEntry | null
 }
@@ -80,6 +82,7 @@ export const useMonth = defineStore('month', () => {
       if (!i.in_card_bill || !i.first_month || !i.installments || !i.installment_amount) continue
       if (installmentDue(i, key.value) === 0) continue
       const idx = diffMonths(i.first_month, key.value)
+      const share = goals.goals.find((g) => g.id === i.goal_id)?.my_share ?? 1
       rows.push({
         id: 'goal-' + i.id,
         name: i.name,
@@ -88,6 +91,8 @@ export const useMonth = defineStore('month', () => {
         gross: i.installment_amount,
         // o reembolso do item cai em partes iguais, junto com cada parcela
         reimbursement: Math.min(summarizeItem(i).reimbursement / i.installments, i.installment_amount),
+        // a metade da outra pessoa está na sua fatura, mas não é custo seu
+        other: Math.round(i.installment_amount * (1 - share) * 100) / 100,
         reimbursed: i.reimbursed,
         entry: null,
       })
@@ -100,7 +105,7 @@ export const useMonth = defineStore('month', () => {
   const insideRows = computed<InsideRow[]>(() => [
     ...insideEntries.value.map((e) => ({
       id: e.id, name: e.name, sub: '', category: e.category, gross: e.amount,
-      reimbursement: reimbOf(e), reimbursed: e.reimbursed, entry: e,
+      reimbursement: reimbOf(e), other: 0, reimbursed: e.reimbursed, entry: e,
     })),
     ...goalInside.value,
   ])
@@ -110,7 +115,7 @@ export const useMonth = defineStore('month', () => {
   const buckets = computed(() =>
     monthBuckets(
       visible.value as BillEntry[],
-      goalInside.value.map((r) => ({ gross: r.gross, reimbursement: r.reimbursement, category: r.category })),
+      goalInside.value.map((r) => ({ gross: r.gross, reimbursement: r.reimbursement + r.other, category: r.category })),
     ),
   )
   /** custo líquido do mês: fatura contada uma vez só e já abatidos os reembolsos */

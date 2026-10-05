@@ -567,6 +567,7 @@ function askRemove(e: MonthEntry) {
                     − {{ brl(r.reimbursement) }} reembolso · {{ r.reimbursed ? 'recebido' : 'a receber' }}
                   </button>
                   <span v-else-if="r.reimbursement > 0" class="block text-xs text-primary-text">− {{ brl(r.reimbursement) }} reembolso</span>
+                  <span v-if="r.other > 0" class="block text-xs text-muted-foreground">− {{ brl(r.other) }} parte da outra pessoa</span>
                 </div>
                 <div class="flex w-8 justify-end">
                   <Button v-if="r.entry" variant="ghost" size="icon-sm" :aria-label="'Editar ' + r.name" @click="openEdit(r.entry!)"><Pencil /></Button>
