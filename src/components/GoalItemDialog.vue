@@ -29,8 +29,11 @@ const parcel = ref('')
 const first = ref('')
 const paidAmount = ref('')
 const paidInstallments = ref('0')
+const parcelTouched = ref(false)
 const reimbursement = ref('')
 const reimbursed = ref(false)
+const hasReimb = ref(false)
+const reimbTouched = ref(false)
 const error = ref('')
 const busy = ref(false)
 
@@ -44,14 +47,53 @@ watch(open, (isOpen) => {
   down.value = i && i.down_payment ? num2(i.down_payment) : ''
   n.value = i?.installments ? String(i.installments) : '10'
   parcel.value = i?.installment_amount ? num2(i.installment_amount) : ''
+  parcelTouched.value = !!i?.installment_amount
   first.value = toMonthInput(i?.first_month ?? addMonths(currentMonthKey(), 1))
   paidAmount.value = i && i.paid_amount ? num2(i.paid_amount) : ''
   paidInstallments.value = String(i?.paid_installments ?? 0)
   reimbursement.value = i && i.reimbursement ? num2(i.reimbursement) : ''
   reimbursed.value = i?.reimbursed ?? false
+  hasReimb.value = !!i && i.reimbursement > 0
+  reimbTouched.value = hasReimb.value
 })
 
 const money = (t: string) => (t.trim() ? parseMoney(t) : 0)
+
+/** Parcela sugerida sem juros: (preço − entrada) ÷ parcelas. Vale até você digitar outro valor. */
+const suggested = computed(() => {
+  const count = parseInt(n.value, 10)
+  const price = money(amount.value)
+  const d = money(down.value)
+  if (!(count >= 1) || !(price > 0) || !(d >= 0) || d >= price) return null
+  return Math.round(((price - d) / count) * 100) / 100
+})
+watch(suggested, (v) => {
+  if (!parcelTouched.value && payment.value === 'installments') parcel.value = v ? num2(v) : ''
+})
+watch(payment, (p) => {
+  if (p === 'installments' && !parcelTouched.value && suggested.value) parcel.value = num2(suggested.value)
+})
+/** Reembolso padrão: 50% do valor do item. Acompanha o valor até você digitar outro. */
+const halfOfAmount = () => {
+  const a = money(amount.value)
+  return Number.isFinite(a) && a > 0 ? num2(Math.round(a * 50) / 100) : ''
+}
+watch(hasReimb, (on) => {
+  if (!on) {
+    reimbursement.value = ''
+    reimbursed.value = false
+    reimbTouched.value = false
+  } else if (!reimbursement.value.trim()) {
+    reimbursement.value = halfOfAmount()
+  }
+})
+watch(amount, () => {
+  if (hasReimb.value && !reimbTouched.value) reimbursement.value = halfOfAmount()
+})
+function onParcelInput(v: string) {
+  parcelTouched.value = v.trim() !== ''
+  if (!parcelTouched.value && suggested.value) parcel.value = num2(suggested.value)
+}
 
 /** Resumo ao vivo: quanto o item custa no total e quanto é juros. */
 const preview = computed(() => {
@@ -158,7 +200,7 @@ const round = (v: number) => Math.round(v * 100) / 100
           </div>
           <div class="grid gap-1.5">
             <Label for="i-parcel">Valor da parcela</Label>
-            <MoneyInput id="i-parcel" v-model="parcel" />
+            <MoneyInput id="i-parcel" v-model="parcel" @update:model-value="onParcelInput" />
           </div>
           <div class="grid gap-1.5">
             <Label for="i-first">1ª parcela</Label>
@@ -175,17 +217,27 @@ const round = (v: number) => Math.round(v * 100) / 100
             <Input id="i-done" v-model="paidInstallments" type="number" min="0" max="120" inputmode="numeric" />
           </div>
         </div>
+        <p v-if="suggested" class="text-xs text-muted-foreground">
+          Parcela sem juros: {{ brl(suggested) }}. Se o cartão cobra juros, digite o valor real da parcela.
+        </p>
         <p v-if="preview" class="text-xs text-muted-foreground">
           Custo total: {{ brl(preview.total) }}<span v-if="preview.interest > 0"> (juros de {{ brl(preview.interest) }})</span>.
         </p>
       </template>
 
-      <div class="grid gap-1.5">
-        <Label for="i-reimb">Reembolso esperado (opcional)</Label>
-        <MoneyInput id="i-reimb" v-model="reimbursement" />
+      <div class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
+        <Label for="i-has-reimb" class="cursor-pointer">
+          Tem reembolso
+          <span class="block text-xs font-normal text-muted-foreground">Ao ligar, já sugere 50% do valor. Você pode editar.</span>
+        </Label>
+        <Switch id="i-has-reimb" v-model="hasReimb" />
+      </div>
+      <div v-if="hasReimb" class="grid gap-1.5">
+        <Label for="i-reimb">Reembolso esperado</Label>
+        <MoneyInput id="i-reimb" v-model="reimbursement" @update:model-value="reimbTouched = true" />
         <p class="text-xs text-muted-foreground">O que vão devolver a você por este item. Reduz o que você precisa guardar.</p>
       </div>
-      <div v-if="money(reimbursement) > 0" class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
+      <div v-if="hasReimb && money(reimbursement) > 0" class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
         <Label for="i-got" class="cursor-pointer">Reembolso já recebido</Label>
         <Switch id="i-got" v-model="reimbursed" />
       </div>
