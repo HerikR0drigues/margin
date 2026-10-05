@@ -19,6 +19,7 @@ export interface RecurringPatch {
   amount: number
   due_day: number
   on_card: boolean
+  card_bill: boolean
   reimbursement: number
 }
 

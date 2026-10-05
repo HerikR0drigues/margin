@@ -101,7 +101,7 @@ export interface GoalTotals {
   interest: number
 }
 
-export function totalsFor(items: GoalItem[], share: number, month: string): GoalTotals {
+export function totalsFor(items: GoalItem[], share: number, month: string, skipInBill = false): GoalTotals {
   let total = 0
   let paid = 0
   let reimb = 0
@@ -113,7 +113,8 @@ export function totalsFor(items: GoalItem[], share: number, month: string): Goal
     paid += s.paid
     reimb += s.reimbursement
     interest += s.interest
-    now += installmentNet(i, month, share)
+    // parcela dentro da fatura já pesa pela fatura: não conta de novo
+    if (!(skipInBill && i.in_card_bill)) now += installmentNet(i, month, share)
   }
   const myTotal = Math.max(r2(total * share - reimb), 0)
   const myPaid = r2(paid * share)

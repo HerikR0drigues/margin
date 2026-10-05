@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import Dialog from '@/components/ui/Dialog.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
@@ -7,7 +7,6 @@ import MoneyInput from '@/components/ui/MoneyInput.vue'
 import Label from '@/components/ui/Label.vue'
 import Select from '@/components/ui/Select.vue'
 import Segmented from '@/components/ui/Segmented.vue'
-import Switch from '@/components/ui/Switch.vue'
 import { CATEGORIES } from '@/lib/categories'
 import { addMonths, currentMonthKey, monthLabel, num2, parseMoney } from '@/lib/format'
 import type { Recurring } from '@/lib/types'
@@ -22,7 +21,19 @@ const category = ref('contas')
 const kind = ref<string>('fixed')
 const amount = ref('')
 const dueDay = ref('10')
-const onCard = ref(false)
+const payModes = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'card', label: 'No cartão' },
+  { value: 'bill', label: 'Fatura do cartão' },
+]
+const payMode = ref('normal')
+const payHint = computed(() =>
+  payMode.value === 'card'
+    ? 'Fica dentro da fatura do mês, sem somar de novo. Precisa existir um gasto marcado como "Fatura do cartão".'
+    : payMode.value === 'bill'
+      ? 'O valor cheio que você paga no cartão. Os gastos marcados "No cartão" aparecem dentro dela.'
+      : 'Pago direto (débito, Pix, boleto).',
+)
 const reimbursement = ref('')
 const from = ref('this')
 const error = ref('')
@@ -38,7 +49,7 @@ watch(open, (isOpen) => {
   kind.value = props.item.kind
   amount.value = num2(props.item.amount)
   dueDay.value = String(props.item.due_day)
-  onCard.value = props.item.on_card
+  payMode.value = props.item.card_bill ? 'bill' : props.item.on_card ? 'card' : 'normal'
   reimbursement.value = props.item.reimbursement ? num2(props.item.reimbursement) : ''
   from.value = 'this'
 })
@@ -62,7 +73,8 @@ async function submit() {
       kind: kind.value as 'fixed' | 'variable',
       amount: Math.round(value * 100) / 100,
       due_day: day,
-      on_card: onCard.value,
+      on_card: payMode.value === 'card',
+      card_bill: payMode.value === 'bill',
       reimbursement: Math.round(reimb * 100) / 100,
     },
     from.value === 'this' ? thisMonth : nextMonth,
@@ -98,12 +110,10 @@ async function submit() {
           <Input id="r-day" v-model="dueDay" type="number" min="1" max="31" inputmode="numeric" />
         </div>
       </div>
-      <div class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
-        <Label for="r-card" class="cursor-pointer">
-          Paga no cartão de crédito
-          <span class="block text-xs font-normal text-muted-foreground">Continua contando como gasto. Se já lança a fatura inteira como gasto, não repita aqui.</span>
-        </Label>
-        <Switch id="r-card" v-model="onCard" />
+      <div class="grid gap-1.5">
+        <Label>Forma de pagamento</Label>
+        <Segmented v-model="payMode" :options="payModes" />
+        <p class="text-xs text-muted-foreground">{{ payHint }}</p>
       </div>
       <div class="grid gap-1.5">
         <Label for="r-reimb">Reembolso esperado (opcional)</Label>

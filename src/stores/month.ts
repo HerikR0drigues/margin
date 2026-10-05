@@ -1,9 +1,24 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { supabase } from '@/lib/supabase'
-import { addMonths, currentMonthKey } from '@/lib/format'
+import { addMonths, currentMonthKey, diffMonths } from '@/lib/format'
+import { monthBuckets, type BillEntry } from '@/lib/card-bill'
+import { installmentDue, summarizeItem } from '@/lib/goal-items'
 import { toNum, type ExpenseKind, type Income, type MonthEntry } from '@/lib/types'
+import { useGoals } from './goals'
 import { useToast } from './toast'
+
+/** Item que aparece dentro da fatura: um gasto marcado "no cartão" ou a parcela de um objetivo. */
+export interface InsideRow {
+  id: string
+  name: string
+  sub: string
+  category: string
+  gross: number
+  reimbursement: number
+  reimbursed: boolean
+  entry: MonthEntry | null
+}
 
 export interface TrendMonth {
   key: string
@@ -35,11 +50,13 @@ export interface NewExpense {
   amount: number
   due_day: number
   on_card?: boolean
+  card_bill?: boolean
   reimbursement?: number
 }
 
 export const useMonth = defineStore('month', () => {
   const toast = useToast()
+  const goals = useGoals()
   const key = ref(currentMonthKey())
   const salary = ref(0)
   const entries = ref<MonthEntry[]>([])
@@ -49,22 +66,80 @@ export const useMonth = defineStore('month', () => {
   let requestId = 0
 
   const visible = computed(() => entries.value.filter((e) => !e.skipped))
-  /** custo líquido do mês (já abatidos os reembolsos) */
-  const total = computed(() => visible.value.reduce((s, e) => s + netOf(e), 0))
-  const paidTotal = computed(() => visible.value.filter((e) => e.paid).reduce((s, e) => s + netOf(e), 0))
-  /** reembolsos ainda não recebidos e já recebidos neste mês */
-  const reimbPending = computed(() => visible.value.filter((e) => !e.reimbursed).reduce((s, e) => s + reimbOf(e), 0))
-  const reimbReceived = computed(() => visible.value.filter((e) => e.reimbursed).reduce((s, e) => s + reimbOf(e), 0))
-  const pendingTotal = computed(() => total.value - paidTotal.value)
-  const cardTotal = computed(() => visible.value.filter((e) => e.on_card).reduce((s, e) => s + e.amount, 0))
-  const cardCount = computed(() => visible.value.filter((e) => e.on_card).length)
-  const paidCount = computed(() => visible.value.filter((e) => e.paid).length)
-  const estimateCount = computed(() => visible.value.filter((e) => e.is_estimate).length)
-  const byCategory = computed(() => {
-    const out: Record<string, number> = {}
-    for (const e of visible.value) out[e.category] = (out[e.category] ?? 0) + netOf(e)
-    return out
+  const bills = computed(() => visible.value.filter((e) => e.card_bill))
+  const hasBill = computed(() => bills.value.length > 0)
+
+  /** Parcelas de objetivos que estão dentro da fatura deste mês. */
+  const goalInside = computed<InsideRow[]>(() => {
+    if (!hasBill.value) return []
+    const rows: InsideRow[] = []
+    for (const i of goals.items) {
+      if (!i.in_card_bill || !i.first_month || !i.installments || !i.installment_amount) continue
+      if (installmentDue(i, key.value) === 0) continue
+      const idx = diffMonths(i.first_month, key.value)
+      rows.push({
+        id: 'goal-' + i.id,
+        name: i.name,
+        sub: `parcela ${idx + 1}/${i.installments} · Planejamento`,
+        category: 'outros',
+        gross: i.installment_amount,
+        // o reembolso do item cai em partes iguais, junto com cada parcela
+        reimbursement: Math.min(summarizeItem(i).reimbursement / i.installments, i.installment_amount),
+        reimbursed: i.reimbursed,
+        entry: null,
+      })
+    }
+    return rows
   })
+
+  /** Gastos marcados "no cartão" (só ficam dentro da fatura quando há fatura no mês). */
+  const insideEntries = computed(() => (hasBill.value ? visible.value.filter((e) => e.on_card) : []))
+  const insideRows = computed<InsideRow[]>(() => [
+    ...insideEntries.value.map((e) => ({
+      id: e.id, name: e.name, sub: '', category: e.category, gross: e.amount,
+      reimbursement: reimbOf(e), reimbursed: e.reimbursed, entry: e,
+    })),
+    ...goalInside.value,
+  ])
+  /** O que aparece solto na lista: tudo, menos o que está dentro da fatura. */
+  const topEntries = computed(() => visible.value.filter((e) => !(hasBill.value && e.on_card)))
+
+  const buckets = computed(() =>
+    monthBuckets(
+      visible.value as BillEntry[],
+      goalInside.value.map((r) => ({ gross: r.gross, reimbursement: r.reimbursement, category: r.category })),
+    ),
+  )
+  /** custo líquido do mês: fatura contada uma vez só e já abatidos os reembolsos */
+  const total = computed(() => buckets.value.total)
+  const byCategory = computed(() => buckets.value.byCategory)
+  /** valor cheio da fatura (ou, sem fatura, o que está marcado no cartão) */
+  const cardTotal = computed(() =>
+    hasBill.value ? buckets.value.billEffective : visible.value.filter((e) => e.on_card).reduce((s, e) => s + e.amount, 0),
+  )
+  const cardCount = computed(() => (hasBill.value ? insideRows.value.length : visible.value.filter((e) => e.on_card).length))
+  const insideGross = computed(() => buckets.value.insideGross)
+  const undetailed = computed(() => buckets.value.undetailed)
+
+  const paidTotal = computed(() => {
+    const billsPaid = hasBill.value && bills.value.every((b) => b.paid)
+    const loose = topEntries.value.filter((e) => !e.card_bill && e.paid).reduce((s, e) => s + netOf(e), 0)
+    return loose + (billsPaid ? buckets.value.cardNet : 0)
+  })
+  const pendingTotal = computed(() => total.value - paidTotal.value)
+  /** reembolsos ainda não recebidos e já recebidos neste mês */
+  const reimbPending = computed(
+    () =>
+      visible.value.filter((e) => !e.reimbursed).reduce((s, e) => s + reimbOf(e), 0) +
+      goalInside.value.filter((r) => !r.reimbursed).reduce((s, r) => s + r.reimbursement, 0),
+  )
+  const reimbReceived = computed(
+    () =>
+      visible.value.filter((e) => e.reimbursed).reduce((s, e) => s + reimbOf(e), 0) +
+      goalInside.value.filter((r) => r.reimbursed).reduce((s, r) => s + r.reimbursement, 0),
+  )
+  const paidCount = computed(() => topEntries.value.filter((e) => e.paid).length)
+  const estimateCount = computed(() => visible.value.filter((e) => e.is_estimate).length)
   const extraIncome = computed(() => incomes.value.reduce((s, i) => s + i.amount, 0))
   /** salário + rendas extras do mês */
   const income = computed(() => salary.value + extraIncome.value)
@@ -77,7 +152,7 @@ export const useMonth = defineStore('month', () => {
   async function loadTrend(k: string) {
     const from = addMonths(k, -11)
     const [ents, sets] = await Promise.all([
-      supabase.from('month_entries').select('month, category, amount, reimbursement').gte('month', from).lte('month', k).eq('skipped', false),
+      supabase.from('month_entries').select('month, category, amount, reimbursement, on_card, card_bill').gte('month', from).lte('month', k).eq('skipped', false),
       supabase.from('month_settings').select('month, salary').gte('month', from).lte('month', k),
     ])
     if (ents.error) throw ents.error
@@ -87,12 +162,24 @@ export const useMonth = defineStore('month', () => {
       months.push({ key: addMonths(from, i), byCategory: {}, total: 0, salary: 0, hasData: false })
     }
     const idx = new Map(months.map((m) => [m.key, m]))
+    const perMonth = new Map<string, BillEntry[]>()
     for (const r of ents.data ?? []) {
-      const m = idx.get(r.month as string)
+      const list = perMonth.get(r.month as string) ?? []
+      list.push({
+        amount: toNum(r.amount),
+        reimbursement: toNum(r.reimbursement ?? 0),
+        category: r.category as string,
+        on_card: !!r.on_card,
+        card_bill: !!r.card_bill,
+      })
+      perMonth.set(r.month as string, list)
+    }
+    for (const [k, list] of perMonth) {
+      const m = idx.get(k)
       if (!m) continue
-      const amount = netOf({ amount: toNum(r.amount), reimbursement: toNum(r.reimbursement ?? 0) })
-      m.byCategory[r.category as string] = (m.byCategory[r.category as string] ?? 0) + amount
-      m.total += amount
+      const b = monthBuckets(list)
+      m.byCategory = b.byCategory
+      m.total = b.total
       m.hasData = true
     }
     for (const r of sets.data ?? []) {
@@ -240,7 +327,7 @@ export const useMonth = defineStore('month', () => {
 
   return {
     key, salary, entries, incomes, trend, loading,
-    visible, total, reimbPending, reimbReceived, cardTotal, cardCount, paidTotal, pendingTotal, paidCount, estimateCount, byCategory, extraIncome, income, free, previousTotal,
+    visible, bills, hasBill, topEntries, insideRows, insideGross, undetailed, total, reimbPending, reimbReceived, cardTotal, cardCount, paidTotal, pendingTotal, paidCount, estimateCount, byCategory, extraIncome, income, free, previousTotal,
     load, saveSalary, addIncome, removeIncome, addOneOff, addRecurring, toggleReimbursed, updateEntry, togglePaid, removeEntry, restoreEntry,
   }
 })

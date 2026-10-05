@@ -4,11 +4,11 @@ import type { Goal, GoalItem } from './types'
 
 const cash = (o: Partial<GoalItem> = {}): GoalItem => ({
   id: 'c', goal_id: 'g', name: 'Passagens', payment: 'cash', amount: 4000, down_payment: 0,
-  installments: null, installment_amount: null, first_month: null, paid_amount: 0, paid_installments: 0, reimbursement: 0, reimbursed: false, ...o,
+  installments: null, installment_amount: null, first_month: null, paid_amount: 0, paid_installments: 0, reimbursement: 0, reimbursed: false, in_card_bill: false, ...o,
 })
 const parc = (o: Partial<GoalItem> = {}): GoalItem => ({
   id: 'p', goal_id: 'g', name: 'Hotel', payment: 'installments', amount: 3000, down_payment: 500,
-  installments: 5, installment_amount: 540, first_month: '2026-11-01', paid_amount: 500, paid_installments: 1, reimbursement: 0, reimbursed: false, ...o,
+  installments: 5, installment_amount: 540, first_month: '2026-11-01', paid_amount: 500, paid_installments: 1, reimbursement: 0, reimbursed: false, in_card_bill: false, ...o,
 })
 const goal = (o: Partial<Goal> = {}): Goal => ({
   id: 'g', name: 'Viagem', kind: 'trip', target_amount: 20000, saved_amount: 0, target_date: '2027-06-01',
@@ -54,6 +54,14 @@ describe('reembolso', () => {
     const p = effectiveGoal(goal(), [parc({ reimbursement: 400 })])
     expect(p.target_amount).toBe(250) // só a entrada: 500 × 0,5
     expect(summarizeItem(parc({ reimbursement: 400 })).remaining).toBe(1760) // 3200 − 400 − 1040
+  })
+})
+
+describe('dentro da fatura', () => {
+  it('parcela dentro da fatura não pesa de novo, quando há fatura no mês', () => {
+    const i = parc({ in_card_bill: true })
+    expect(totalsFor([i], 0.5, '2026-12-01', true).myInstallmentsNow).toBe(0)
+    expect(totalsFor([i], 0.5, '2026-12-01', false).myInstallmentsNow).toBe(270)
   })
 })
 

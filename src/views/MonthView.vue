@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
-  ArrowDown, ArrowUp, Check, CreditCard, ChevronLeft, ChevronRight, CircleAlert, CircleCheck,
+  ArrowDown, ArrowUp, Check, ChevronDown, CreditCard, ChevronLeft, ChevronRight, CircleAlert, CircleCheck,
   Pencil, Plus, RotateCcw, SkipForward, Trash2, TriangleAlert,
 } from '@lucide/vue'
 import Badge from '@/components/ui/Badge.vue'
@@ -86,7 +86,7 @@ const impact = computed(() =>
   budgetImpact(
     month.income,
     month.total,
-    plans.value.map((p, i) => p.monthly + goals.totals(goals.goals[i]!, month.key).myInstallmentsNow),
+    plans.value.map((p, i) => p.monthly + goals.totals(goals.goals[i]!, month.key, month.hasBill).myInstallmentsNow),
   ),
 )
 
@@ -124,11 +124,12 @@ const filters = [
   { value: 'paid', label: 'Pagos' },
 ]
 const rows = computed(() =>
-  month.visible
+  month.topEntries
     .filter((e) => (filter.value === 'pending' ? !e.paid : filter.value === 'paid' ? e.paid : true))
     .slice()
     .sort((a, b) => a.due_day - b.due_day || a.name.localeCompare(b.name, 'pt-BR')),
 )
+const billOpen = ref(true)
 const skipped = computed(() => month.entries.filter((e) => e.skipped))
 function isLate(e: MonthEntry) {
   if (e.paid) return false
@@ -291,7 +292,7 @@ function askRemove(e: MonthEntry) {
           <div class="flex items-center justify-between gap-2">
             <h2 class="text-sm font-medium">Pagamentos</h2>
             <span class="text-xs text-muted-foreground">
-              {{ month.visible.length ? `${month.paidCount} de ${month.visible.length} pagos` : 'Nenhum gasto' }}
+              {{ month.topEntries.length ? `${month.paidCount} de ${month.topEntries.length} pagos` : 'Nenhum gasto' }}
             </span>
           </div>
           <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary">
@@ -404,7 +405,8 @@ function askRemove(e: MonthEntry) {
               <span>vence dia {{ e.due_day }}</span>
               <Badge v-if="e.recurring_id" variant="outline">recorrente</Badge>
               <Badge v-else>avulso</Badge>
-              <Badge v-if="e.on_card" variant="outline"><CreditCard /> cartão</Badge>
+              <Badge v-if="e.card_bill" variant="primary"><CreditCard /> fatura do cartão</Badge>
+              <Badge v-else-if="e.on_card" variant="outline"><CreditCard /> cartão</Badge>
               <Badge v-if="e.is_estimate" variant="primary">estimado</Badge>
               <Badge v-if="isLate(e)" variant="warn"><TriangleAlert class="text-serious" /> atrasado</Badge>
               <span v-if="e.paid">pago</span>
@@ -457,6 +459,57 @@ function askRemove(e: MonthEntry) {
             >
               <component :is="e.recurring_id ? SkipForward : Trash2" />
             </Button>
+          </div>
+
+          <!-- o que está dentro da fatura -->
+          <div v-if="e.card_bill && e.id === month.bills[0]?.id" class="col-span-full mt-3 rounded-lg border bg-muted/30">
+            <button
+              type="button"
+              class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs"
+              :aria-expanded="billOpen"
+              @click="billOpen = !billOpen"
+            >
+              <span class="flex items-center gap-1.5 font-medium">
+                <component :is="billOpen ? ChevronDown : ChevronRight" class="size-3.5" />
+                {{ month.insideRows.length }} {{ month.insideRows.length === 1 ? 'item dentro' : 'itens dentro' }} da fatura
+              </span>
+              <span class="tabular-nums text-muted-foreground">
+                Detalhado {{ brl(month.insideGross) }} · Sem detalhe {{ brl(month.undetailed) }}
+              </span>
+            </button>
+            <div class="mx-3 mb-2 h-1.5 overflow-hidden rounded-full bg-secondary" role="img" :aria-label="`${Math.round((month.insideGross / Math.max(month.cardTotal, 1)) * 100)}% da fatura detalhada`">
+              <div class="h-full rounded-full bg-brand-500 transition-[width] duration-500" :style="{ width: Math.min(month.insideGross / Math.max(month.cardTotal, 1), 1) * 100 + '%' }" />
+            </div>
+            <ul v-if="billOpen && month.insideRows.length">
+              <li v-for="r in month.insideRows" :key="r.id" class="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 border-t px-3 py-2">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 truncate text-sm">
+                    <span class="size-2 shrink-0 rounded-full" :style="{ background: categoryById(r.category).color }" />
+                    <span class="truncate">{{ r.name }}</span>
+                    <span v-if="r.sub" class="shrink-0 text-xs text-muted-foreground">{{ r.sub }}</span>
+                  </div>
+                </div>
+                <div class="text-right text-sm tabular-nums">
+                  {{ brl(r.gross) }}
+                  <button
+                    v-if="r.reimbursement > 0 && r.entry"
+                    type="button"
+                    class="block w-full text-right text-xs hover:underline"
+                    :class="r.reimbursed ? 'text-good' : 'text-primary-text'"
+                    @click="month.toggleReimbursed(r.entry!)"
+                  >
+                    − {{ brl(r.reimbursement) }} reembolso · {{ r.reimbursed ? 'recebido' : 'a receber' }}
+                  </button>
+                  <span v-else-if="r.reimbursement > 0" class="block text-xs text-primary-text">− {{ brl(r.reimbursement) }} reembolso</span>
+                </div>
+                <div class="flex w-8 justify-end">
+                  <Button v-if="r.entry" variant="ghost" size="icon-sm" :aria-label="'Editar ' + r.name" @click="openEdit(r.entry!)"><Pencil /></Button>
+                </div>
+              </li>
+            </ul>
+            <p v-if="billOpen && !month.insideRows.length" class="border-t px-3 py-2 text-xs text-muted-foreground">
+              Nada detalhado ainda. Marque gastos como "No cartão" para ver o que há dentro da fatura.
+            </p>
           </div>
         </li>
       </ul>

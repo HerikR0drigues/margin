@@ -71,7 +71,8 @@ function askEnd(r: Recurring) {
               <span>{{ categoryById(r.category).name }}</span>
               <span>vence dia {{ r.due_day }}</span>
               <Badge :variant="r.kind === 'variable' ? 'primary' : 'outline'">{{ r.kind === 'variable' ? 'variável' : 'fixa' }}</Badge>
-              <Badge v-if="r.on_card" variant="outline"><CreditCard /> cartão</Badge>
+              <Badge v-if="r.card_bill" variant="primary"><CreditCard /> fatura do cartão</Badge>
+              <Badge v-else-if="r.on_card" variant="outline"><CreditCard /> cartão</Badge>
               <Badge v-if="r.reimbursement > 0" variant="primary">reembolso {{ brl(r.reimbursement) }}</Badge>
               <span v-if="r.end_month">até {{ monthLabel(r.end_month) }}</span>
             </div>

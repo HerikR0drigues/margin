@@ -27,6 +27,8 @@ export interface MonthEntry {
   /** quanto você vai receber de volta por este gasto */
   reimbursement: number
   reimbursed: boolean
+  /** este lançamento é a fatura do cartão */
+  card_bill: boolean
 }
 
 export interface Recurring {
@@ -39,6 +41,7 @@ export interface Recurring {
   start_month: string
   end_month: string | null
   on_card: boolean
+  card_bill: boolean
   reimbursement: number
 }
 
@@ -75,6 +78,8 @@ export interface GoalItem {
   paid_installments: number
   reimbursement: number
   reimbursed: boolean
+  /** a parcela já está dentro da fatura do cartão lançada no mês */
+  in_card_bill: boolean
 }
 
 export interface Income {

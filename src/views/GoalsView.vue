@@ -50,7 +50,8 @@ const cards = computed(() =>
       progress: goalAmount > 0 ? Math.min(saved / goalAmount, 1) : 1,
       points: projection(planInput(eg, saved, dateOf(g)), NOW, sim.monthly),
       items: goals.itemsOf(g.id),
-      totals: goals.totals(g, NOW),
+      // se a fatura do mês já foi lançada, as parcelas "dentro da fatura" não pesam de novo
+      totals: goals.totals(g, NOW, month.key === NOW && month.hasBill),
       contribution: goals.contributionFor(g.id, NOW),
     }
   }),

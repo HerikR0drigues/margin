@@ -137,6 +137,14 @@ await db.query("update month_entries set reimbursed = true where recurring_id = 
 ok((await q("select 1 from month_entries where reimbursed")).length === 1, 'reembolso pode ser marcado como recebido')
 await throws(() => db.query("insert into month_entries (month, name, category, amount, due_day, reimbursement) values ('2026-08-01','X','outros',10,1,-5)"), 'reembolso não pode ser negativo')
 
+// --- fatura do cartão
+const [{ id: fatura }] = await q("insert into recurring_expenses (name, category, kind, amount, due_day, start_month, card_bill) values ('Fatura','cartao','variable',3000,10,'2026-06-01', true) returning id")
+await db.query("select ensure_month('2026-09-01')")
+const ft = await q("select card_bill, on_card from month_entries where recurring_id = $1 and month = '2026-09-01'", [fatura])
+ok(ft.length === 1 && ft[0].card_bill === true && ft[0].on_card === false, 'mês novo herda o marcador de fatura')
+await throws(() => db.query("update month_entries set on_card = true where recurring_id = $1", [fatura]), 'um gasto não é fatura e está no cartão ao mesmo tempo')
+await throws(() => db.query("insert into recurring_expenses (name, category, kind, amount, due_day, start_month, on_card, card_bill) values ('X','outros','fixed',1,1,'2026-06-01', true, true)"), 'modelo recorrente também não pode ser as duas coisas')
+
 // --- metas
 await db.query("insert into goals (name, kind, target_amount, target_date) values ('Viagem','trip',9000,'2027-06-01')")
 const goals = await q('select count(*)::int as n from goals')
@@ -160,6 +168,8 @@ await throws(() => db.query("insert into month_incomes (month, description, amou
 await throws(() => db.query("insert into month_incomes (month, description, amount) values ('2026-05-01', 'Zero', 0)"), 'renda extra precisa ser positiva')
 
 await db.query("insert into goal_items (goal_id, name, payment, amount, reimbursement) values ($1, 'Passagem', 'cash', 5000, 3500)", [goalA])
+await db.query("insert into goal_items (goal_id, name, payment, amount, down_payment, installments, installment_amount, first_month, in_card_bill) values ($1, 'No cartão', 'installments', 900, 0, 3, 300, '2026-11-01', true)", [goalA])
+ok((await q('select 1 from goal_items where in_card_bill')).length === 1, 'item de objetivo pode estar dentro da fatura')
 await throws(() => db.query("insert into goal_items (goal_id, name, payment, amount, reimbursement) values ($1, 'Reembolso demais', 'cash', 100, 150)", [goalA]), 'reembolso do item não passa do valor')
 
 // --- isolamento entre usuários

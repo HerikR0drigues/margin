@@ -8,7 +8,6 @@ import Label from '@/components/ui/Label.vue'
 import Select from '@/components/ui/Select.vue'
 import Segmented from '@/components/ui/Segmented.vue'
 import { CATEGORIES } from '@/lib/categories'
-import Switch from '@/components/ui/Switch.vue'
 import { num2, parseMoney } from '@/lib/format'
 import type { MonthEntry } from '@/lib/types'
 import { useMonth } from '@/stores/month'
@@ -23,7 +22,19 @@ const name = ref('')
 const category = ref('contas')
 const amount = ref('')
 const dueDay = ref('10')
-const onCard = ref(false)
+const payModes = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'card', label: 'No cartão' },
+  { value: 'bill', label: 'Fatura do cartão' },
+]
+const payMode = ref('normal')
+const payHint = computed(() =>
+  payMode.value === 'card'
+    ? 'Fica dentro da fatura do mês, sem somar de novo. Precisa existir um gasto marcado como "Fatura do cartão".'
+    : payMode.value === 'bill'
+      ? 'O valor cheio que você paga no cartão. Os gastos marcados "No cartão" aparecem dentro dela.'
+      : 'Pago direto (débito, Pix, boleto).',
+)
 const reimbursement = ref('')
 const error = ref('')
 const saving = ref(false)
@@ -54,7 +65,7 @@ watch(open, (isOpen) => {
     category.value = props.entry.category
     amount.value = num2(props.entry.amount)
     dueDay.value = String(props.entry.due_day)
-    onCard.value = props.entry.on_card
+    payMode.value = props.entry.card_bill ? 'bill' : props.entry.on_card ? 'card' : 'normal'
     reimbursement.value = props.entry.reimbursement ? num2(props.entry.reimbursement) : ''
   } else {
     mode.value = 'fixed'
@@ -62,7 +73,7 @@ watch(open, (isOpen) => {
     category.value = 'contas'
     amount.value = ''
     dueDay.value = '10'
-    onCard.value = false
+    payMode.value = 'normal'
     reimbursement.value = ''
   }
 })
@@ -77,7 +88,7 @@ async function submit() {
   const reimb = reimbursement.value.trim() ? parseMoney(reimbursement.value) : 0
   if (!Number.isFinite(reimb) || reimb < 0) return void (error.value = 'O reembolso é inválido.')
   if (reimb > value) return void (error.value = 'O reembolso não pode ser maior que o valor do gasto.')
-  const base = { name: name.value.trim(), category: category.value, amount: Math.round(value * 100) / 100, due_day: day, on_card: onCard.value, reimbursement: Math.round(reimb * 100) / 100 }
+  const base = { name: name.value.trim(), category: category.value, amount: Math.round(value * 100) / 100, due_day: day, on_card: payMode.value === 'card', card_bill: payMode.value === 'bill', reimbursement: Math.round(reimb * 100) / 100 }
   saving.value = true
   try {
     if (props.entry) await month.updateEntry(props.entry, base)
@@ -113,12 +124,10 @@ async function submit() {
           <Input id="e-day" v-model="dueDay" type="number" min="1" max="31" inputmode="numeric" />
         </div>
       </div>
-      <div class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
-        <Label for="e-card" class="cursor-pointer">
-          Paga no cartão de crédito
-          <span class="block text-xs font-normal text-muted-foreground">Continua contando como gasto. Se já lança a fatura inteira como gasto, não repita aqui.</span>
-        </Label>
-        <Switch id="e-card" v-model="onCard" />
+      <div class="grid gap-1.5">
+        <Label>Forma de pagamento</Label>
+        <Segmented v-model="payMode" :options="payModes" />
+        <p class="text-xs text-muted-foreground">{{ payHint }}</p>
       </div>
       <div class="grid gap-1.5">
         <Label for="e-reimb">Reembolso esperado (opcional)</Label>

@@ -33,6 +33,7 @@ const parcelTouched = ref(false)
 const reimbursement = ref('')
 const reimbursed = ref(false)
 const hasReimb = ref(false)
+const inBill = ref(false)
 const reimbTouched = ref(false)
 const error = ref('')
 const busy = ref(false)
@@ -54,6 +55,7 @@ watch(open, (isOpen) => {
   reimbursement.value = i && i.reimbursement ? num2(i.reimbursement) : ''
   reimbursed.value = i?.reimbursed ?? false
   hasReimb.value = !!i && i.reimbursement > 0
+  inBill.value = i?.in_card_bill ?? false
   reimbTouched.value = hasReimb.value
 })
 
@@ -125,7 +127,7 @@ async function submit() {
     input = {
       name: name.value.trim(), payment: 'cash', amount: round(a), down_payment: 0,
       installments: null, installment_amount: null, first_month: null,
-      paid_amount: round(paid), paid_installments: 0, ...refund,
+      paid_amount: round(paid), paid_installments: 0, ...refund, in_card_bill: false,
     }
   } else {
     const d = money(down.value)
@@ -141,7 +143,7 @@ async function submit() {
     input = {
       name: name.value.trim(), payment: 'installments', amount: round(a), down_payment: round(d),
       installments: count, installment_amount: round(p), first_month: fromMonthInput(first.value),
-      paid_amount: round(paid), paid_installments: done, ...refund,
+      paid_amount: round(paid), paid_installments: done, ...refund, in_card_bill: inBill.value,
     }
   }
   busy.value = true
@@ -216,6 +218,13 @@ const round = (v: number) => Math.round(v * 100) / 100
             <Label for="i-done">Parcelas já pagas</Label>
             <Input id="i-done" v-model="paidInstallments" type="number" min="0" max="120" inputmode="numeric" />
           </div>
+        </div>
+        <div class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
+          <Label for="i-bill" class="cursor-pointer">
+            Está dentro da fatura do cartão
+            <span class="block text-xs font-normal text-muted-foreground">A parcela aparece dentro da fatura do mês e não pesa de novo nas metas.</span>
+          </Label>
+          <Switch id="i-bill" v-model="inBill" />
         </div>
         <p v-if="suggested" class="text-xs text-muted-foreground">
           Parcela sem juros: {{ brl(suggested) }}. Se o cartão cobra juros, digite o valor real da parcela.

@@ -17,6 +17,7 @@ App de gastos mensais, micro SaaS **só por convite**. Dono/admin: o próprio us
 - Rendas extras do mês: `month_incomes` (Pix, bônus...). `month.income` = salário + extras e é a base da sobra/peso.
 - Objetivo com itens: `goal_items` (`payment` = `cash` | `installments`, entrada, parcelas, o que já foi pago). `goals.my_share` = parte do usuário (0.5 = dividido com a noiva). `src/lib/goal-items.ts` calcula custo, juros e parcelas do mês; `effectiveGoal` entrega ao planejador só a parte do usuário (à vista + entradas) e as parcelas do mês entram no peso das metas. Testes em `goal-items.test.ts`.
 - Cartão e reembolso: `on_card` marca gasto pago no cartão (continua contando; o total no cartão é o valor cheio da fatura). `reimbursement` (por gasto/recorrente/item de objetivo) é o que devolvem ao usuário: o custo do gasto é `amount − reimbursement` (`netOf` em `stores/month.ts`) e o mês mostra reembolsos a receber/recebidos (`reimbursed`). Em objetivos o reembolso é do usuário e abate **depois** de dividir (`my_share`); em itens parcelados só reduz o custo total, não a entrada.
+- Fatura do cartão: `card_bill` marca o lançamento que é a fatura (valor cheio); gastos `on_card` ficam **dentro** dela e não somam de novo (se não há fatura no mês, `on_card` é só marcador). Detalhado > fatura: vale a soma. O que sobra sem detalhe entra na categoria da fatura. Regra em `src/lib/card-bill.ts` (`monthBuckets`, testada) e usada pelo mês e pelo gráfico mês a mês. Itens parcelados de objetivo com `in_card_bill` aparecem dentro da fatura e não pesam de novo nas metas quando o mês tem fatura.
 - `goals` + `goal_contributions`; matemática em `src/lib/planner.ts` (anuidade com rendimento, financiamento pela tabela Price, impacto = sobra − soma dos aportes). Testes em `planner.test.ts`.
 
 ## Acesso
@@ -29,7 +30,7 @@ App de gastos mensais, micro SaaS **só por convite**. Dono/admin: o próprio us
 Antes de dar algo por pronto: build + testes + abrir a tela no navegador.
 
 ## Estado
-Pronto: schema/RLS/funções (50 checagens SQL), planejador e itens (26 testes), todas as telas, Docker.
+Pronto: schema/RLS/funções (54 checagens SQL), planejador, itens e fatura (36 testes), todas as telas, Docker.
 Já roda contra o Supabase **na nuvem** (projeto Margin, migrations aplicadas com `npx supabase db push`, função `accept-invite` publicada). **Ainda não validado**: Docker (o dono não tem Docker instalado) e o fluxo de convite de ponta a ponta.
 
 ## Ideias a seguir
