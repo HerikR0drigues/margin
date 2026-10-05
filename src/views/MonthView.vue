@@ -403,7 +403,7 @@ function askRemove(e: MonthEntry) {
           <DonutChart
             v-model:active="activeCat"
             :slices="slices"
-            center-label="Gastos fixos"
+            center-label="Gastos do mês"
             :center-value="brl0(month.total)"
             :center-note="month.income > 0 ? Math.round(ratio * 100) + '% da renda' : ''"
             :ariaLabel="`Gastos de ${monthLabel(month.key)} por categoria. Total ${brl(month.total)}.`"
