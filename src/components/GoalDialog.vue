@@ -133,7 +133,7 @@ async function submit() {
         </p>
       </div>
       <p class="text-xs text-muted-foreground">
-        Com itens cadastrados, o que ainda não virou item (valor total menos a soma dos itens) entra como "a detalhar" e é guardado ao longo dos meses.
+        Com itens cadastrados, só o que virou item entra na conta. A diferença para o valor total aparece como "ainda sem detalhar".
       </p>
       <div class="grid grid-cols-2 gap-3">
         <div class="grid gap-1.5">

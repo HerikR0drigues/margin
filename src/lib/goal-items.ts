@@ -85,16 +85,16 @@ export function installmentNet(i: GoalItem, month: string, share: number): numbe
   return Math.max(r2(due * share - perParcel), 0)
 }
 
-/** Parte do valor do objetivo que ainda não virou item (estimativa a gastar). Nunca negativa. */
+/** Parte do valor do objetivo que ainda não virou item. Só informativo: não entra na conta até ser detalhado. */
 export function undetailedOf(goalTarget: number, items: GoalItem[]): number {
   const detailed = items.reduce((s, i) => s + i.amount, 0)
   return Math.max(r2(goalTarget - detailed), 0)
 }
 
 export interface GoalTotals {
-  /** custo de todos os itens mais o que ainda falta detalhar (visão do casal) */
+  /** custo de todos os itens (visão do casal) */
   total: number
-  /** o que ainda não virou item: estimativa que entra como valor a guardar */
+  /** o que ainda não virou item: aparece como aviso, mas não entra em nenhum cálculo */
   undetailed: number
   paid: number
   remaining: number
@@ -131,7 +131,6 @@ export function totalsFor(
     // parcela dentro da fatura já pesa pela fatura: não conta de novo
     if (!(skipInBill && i.in_card_bill)) now += installmentNet(i, month, share)
   }
-  total += undetailed
   const myTotal = Math.max(r2(total * share - reimb), 0)
   const myPaid = r2(paid * share)
   return {
@@ -169,9 +168,9 @@ export function effectiveGoal(goal: Goal, items: GoalItem[]): Goal {
   }
   return {
     ...goal,
-    // o que ainda não virou item é uma estimativa à vista; o reembolso é de quem recebe
+    // o que ainda não virou item não entra na conta; o reembolso é de quem recebe
     // (o usuário) e abate depois de dividir
-    target_amount: Math.max(r2((cash + undetailedOf(goal.target_amount, items)) * share - cashReimb), 0),
+    target_amount: Math.max(r2(cash * share - cashReimb), 0),
     saved_amount: r2(goal.saved_amount + cashPaid * share),
     financing: false,
     down_payment: 0,

@@ -271,8 +271,8 @@ function askRemove(g: Goal) {
           </ul>
           <div v-if="c.items.length && c.totals.undetailed > 0" class="flex items-center justify-between gap-3 border-t px-3 py-2.5">
             <div class="min-w-0">
-              <div class="text-sm font-medium">A detalhar</div>
-              <div class="text-xs text-muted-foreground">Estimativa do que ainda não virou item. Entra como valor a guardar.</div>
+              <div class="text-sm font-medium">Ainda sem detalhar</div>
+              <div class="text-xs text-muted-foreground">Previsto no objetivo, mas sem item. Não entra na conta até você detalhar.</div>
             </div>
             <div class="text-right text-sm font-medium tabular-nums">{{ brl(c.totals.undetailed) }}</div>
           </div>

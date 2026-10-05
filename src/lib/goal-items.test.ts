@@ -70,18 +70,18 @@ describe('a detalhar', () => {
     amount: 9500, down_payment: 0, installments: 4, installment_amount: 2375,
     first_month: '2026-10-01', paid_amount: 0, paid_installments: 0,
   })
-  it('a diferença entre o valor do objetivo e os itens entra como estimativa a guardar', () => {
+  it('a diferença entre o valor do objetivo e os itens é só informativa', () => {
     expect(undetailedOf(20000, [passagem()])).toBe(10500)
     expect(undetailedOf(5000, [passagem()])).toBe(0) // itens passam do valor: nada a detalhar
+  })
+  it('o que não foi detalhado não entra na conta: nem no valor a guardar, nem nos totais', () => {
     // caso real: 20k, metade cada, só a passagem (parcelada, sem entrada) cadastrada
     const e = effectiveGoal(goal({ target_amount: 20000 }), [passagem()])
-    expect(e.target_amount).toBe(5250) // 10.500 × 0,5
-  })
-  it('entra no total e no que falta, mas não nas parcelas do mês', () => {
+    expect(e.target_amount).toBe(0) // sem entrada, nada a guardar ainda
     const t = totalsFor([passagem()], 0.5, '2026-10-01', false, 20000)
-    expect(t.undetailed).toBe(10500)
-    expect(t.total).toBe(20000)
-    expect(t.myTotal).toBe(10000)
+    expect(t.undetailed).toBe(10500) // aparece como aviso
+    expect(t.total).toBe(9500) // mas não soma
+    expect(t.myTotal).toBe(4750)
     expect(t.myInstallmentsNow).toBe(1187.5)
   })
   it('sem o valor do objetivo, nada a detalhar', () => {
