@@ -255,9 +255,17 @@ function askRemove(g: Goal) {
               </div>
               <div class="text-right text-sm font-medium tabular-nums">
                 {{ brl(summarizeItem(i).total) }}
-                <div v-if="c.g.my_share < 1 || i.reimbursement > 0" class="text-xs font-normal text-primary-text">
-                  sua parte {{ brl(myItemCost(summarizeItem(i).total, summarizeItem(i).reimbursement, c.g.my_share)) }}
-                </div>
+                <template v-if="c.g.my_share < 1 || i.reimbursement > 0">
+                  <div v-if="c.g.my_share < 1" class="text-xs font-normal text-muted-foreground">
+                    {{ pct(c.g.my_share, 0) }}% seu: {{ brl(summarizeItem(i).total * c.g.my_share) }}
+                  </div>
+                  <div v-if="summarizeItem(i).reimbursement > 0" class="text-xs font-normal text-muted-foreground">
+                    − reembolso {{ brl(summarizeItem(i).reimbursement) }}
+                  </div>
+                  <div class="text-xs font-semibold text-primary-text">
+                    você paga {{ brl(myItemCost(summarizeItem(i).total, summarizeItem(i).reimbursement, c.g.my_share)) }}
+                  </div>
+                </template>
               </div>
               <div class="flex items-center">
                 <Button variant="ghost" size="icon-sm" :aria-label="'Editar ' + i.name" @click="openItem(c.g.id, i)"><Pencil /></Button>
@@ -290,8 +298,8 @@ function askRemove(g: Goal) {
               <dd class="mt-0.5 font-medium tabular-nums">{{ brl0(c.totals.total) }}</dd>
             </div>
             <div>
-              <dt class="text-muted-foreground">{{ c.g.my_share < 1 ? 'Sua parte' : 'Já pago' }}</dt>
-              <dd class="mt-0.5 font-medium tabular-nums">{{ brl0(c.g.my_share < 1 ? c.totals.myTotal : c.totals.paid) }}</dd>
+              <dt class="text-muted-foreground">{{ c.g.my_share < 1 || c.totals.reimbursement > 0 ? 'Você paga' : 'Já pago' }}</dt>
+              <dd class="mt-0.5 font-medium tabular-nums">{{ brl0(c.g.my_share < 1 || c.totals.reimbursement > 0 ? c.totals.myTotal : c.totals.paid) }}</dd>
             </div>
             <div>
               <dt class="text-muted-foreground">Falta pagar</dt>
@@ -302,7 +310,7 @@ function askRemove(g: Goal) {
             Parcelas deste mês: {{ brl(c.totals.myInstallmentsNow) }} (já entram no peso do mês).
           </p>
           <p v-if="c.totals.reimbursement > 0" class="border-t px-3 py-2.5 text-xs text-muted-foreground">
-            Reembolsos esperados: {{ brl(c.totals.reimbursement) }} (já abatidos do que você precisa guardar).
+            Reembolsos esperados: {{ brl(c.totals.reimbursement) }}, abatidos da sua parte ({{ pct(c.g.my_share, 0) }}%). "Você paga" é o que sobra depois da divisão e do reembolso.
           </p>
           <p v-if="c.totals.interest > 0" class="border-t px-3 py-2.5 text-xs text-muted-foreground">
             Juros embutidos nas parcelas: {{ brl(c.totals.interest) }}.

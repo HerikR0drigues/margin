@@ -278,7 +278,7 @@ const round = (v: number) => Math.round(v * 100) / 100
 
       <div v-if="mine" class="rounded-lg border border-primary/40 bg-accent/40 px-3 py-2.5 text-sm">
         <div class="flex items-baseline justify-between gap-3">
-          <span class="font-medium">Sua parte neste item</span>
+          <span class="font-medium">Você paga neste item</span>
           <span class="text-base font-semibold tabular-nums">{{ brl(mine.mine) }}</span>
         </div>
         <p class="mt-1 text-xs text-muted-foreground">
@@ -287,7 +287,7 @@ const round = (v: number) => Math.round(v * 100) / 100
             e {{ Math.round((1 - mine.share) * 100) }}% é da outra pessoa ({{ brl(mine.total * (1 - mine.share)) }}).
           </template>
           <template v-else>Objetivo sem divisão: o item é todo seu.</template>
-          <template v-if="mine.reimb > 0"> Reembolso de {{ brl(mine.reimb) }} abatido da sua parte.</template>
+          <template v-if="mine.reimb > 0"> Da sua parte, abate o reembolso de {{ brl(mine.reimb) }}.</template>
           <template v-if="mine.perMonth != null"> Por parcela, você paga {{ brl(mine.perMonth) }}.</template>
         </p>
       </div>
