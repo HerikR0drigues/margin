@@ -235,7 +235,10 @@ const round = (v: number) => Math.round(v * 100) / 100
       <div v-if="hasReimb" class="grid gap-1.5">
         <Label for="i-reimb">Reembolso esperado</Label>
         <MoneyInput id="i-reimb" v-model="reimbursement" @update:model-value="reimbTouched = true" />
-        <p class="text-xs text-muted-foreground">O que vão devolver a você por este item. Reduz o que você precisa guardar.</p>
+        <p class="text-xs text-muted-foreground">
+          O que vão devolver a você por este item.
+          {{ payment === 'installments' ? 'Abate em partes iguais a cada parcela.' : 'Reduz o que você precisa guardar.' }}
+        </p>
       </div>
       <div v-if="hasReimb && money(reimbursement) > 0" class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
         <Label for="i-got" class="cursor-pointer">Reembolso já recebido</Label>

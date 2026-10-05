@@ -74,6 +74,17 @@ export function installmentDue(i: GoalItem, month: string): number {
   return i.installment_amount
 }
 
+/**
+ * Quanto a parcela do mês pesa para o usuário: a parte dele da parcela menos a fatia do
+ * reembolso que cai junto com cada parcela (reembolso ÷ nº de parcelas). Nunca negativo.
+ */
+export function installmentNet(i: GoalItem, month: string, share: number): number {
+  const due = installmentDue(i, month)
+  if (due === 0) return 0
+  const perParcel = summarizeItem(i).reimbursement / (i.installments ?? 1)
+  return Math.max(r2(due * share - perParcel), 0)
+}
+
 export interface GoalTotals {
   /** custo de todos os itens (visão do casal) */
   total: number
@@ -85,7 +96,7 @@ export interface GoalTotals {
   myTotal: number
   myPaid: number
   myRemaining: number
-  /** parcelas que vencem neste mês, parte do usuário */
+  /** parcelas que vencem neste mês, parte do usuário já sem a fatia do reembolso */
   myInstallmentsNow: number
   interest: number
 }
@@ -102,7 +113,7 @@ export function totalsFor(items: GoalItem[], share: number, month: string): Goal
     paid += s.paid
     reimb += s.reimbursement
     interest += s.interest
-    now += installmentDue(i, month)
+    now += installmentNet(i, month, share)
   }
   const myTotal = Math.max(r2(total * share - reimb), 0)
   const myPaid = r2(paid * share)
@@ -114,7 +125,7 @@ export function totalsFor(items: GoalItem[], share: number, month: string): Goal
     myTotal,
     myPaid,
     myRemaining: Math.max(r2(myTotal - myPaid), 0),
-    myInstallmentsNow: r2(now * share),
+    myInstallmentsNow: r2(now),
     interest: r2(interest),
   }
 }

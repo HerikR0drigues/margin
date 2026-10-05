@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { effectiveGoal, installmentDue, summarizeItem, totalsFor } from './goal-items'
+import { effectiveGoal, installmentDue, installmentNet, summarizeItem, totalsFor } from './goal-items'
 import type { Goal, GoalItem } from './types'
 
 const cash = (o: Partial<GoalItem> = {}): GoalItem => ({
@@ -54,6 +54,24 @@ describe('reembolso', () => {
     const p = effectiveGoal(goal(), [parc({ reimbursement: 400 })])
     expect(p.target_amount).toBe(250) // só a entrada: 500 × 0,5
     expect(summarizeItem(parc({ reimbursement: 400 })).remaining).toBe(1760) // 3200 − 400 − 1040
+  })
+})
+
+describe('installmentNet', () => {
+  it('o reembolso abate em partes iguais a cada parcela, sem ficar negativo', () => {
+    const i = parc({ reimbursement: 400 }) // 400 ÷ 5 parcelas = 80 por parcela
+    expect(installmentNet(i, '2026-12-01', 0.5)).toBe(190) // 540 × 0,5 − 80
+    expect(installmentNet(i, '2026-12-01', 1)).toBe(460)
+    expect(installmentNet(parc({ reimbursement: 3000 }), '2026-12-01', 0.5)).toBe(0)
+    expect(installmentNet(i, '2026-10-01', 0.5)).toBe(0) // fora do período
+  })
+  it('caso real: passagem 9.500 em 4×, metade cada, reembolso de 50%', () => {
+    const i = parc({
+      amount: 9500, down_payment: 0, installments: 4, installment_amount: 2375,
+      first_month: '2026-10-01', paid_amount: 0, paid_installments: 0, reimbursement: 4750,
+    })
+    expect(installmentNet(i, '2026-10-01', 0.5)).toBe(0) // 1.187,50 − 1.187,50
+    expect(totalsFor([i], 0.5, '2026-10-01').myTotal).toBe(0) // 4.750 − 4.750
   })
 })
 
